@@ -1,0 +1,1789 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>貓貓摸魚任務</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#d97757">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="貓貓摸魚">
+<link rel="apple-touch-icon" href="icon-180.png">
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+:root{
+  --bg:#EEEBE4;--card:#fff;--text:#1a1a1a;--muted:#888880;
+  --accent:#d97757;--accent-light:#fdf0e8;--border:#e0ddd6;
+  --green:#3A7D44;--green-light:#E6F2E8;
+  --red:#C0392B;--red-light:#FAEAE8;
+  --amber:#B07A20;--amber-light:#F5EDD8;
+}
+html{background:#EEEBE4 !important;}
+html,body{width:100%;height:100%;margin:0;padding:0;background:#EEEBE4;}
+body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC','Microsoft JhengHei',sans-serif;background:var(--bg);min-height:100vh;min-height:100dvh;}
+.app{width:100%;min-height:100vh;min-height:100dvh;background:var(--bg);position:relative;}
+/* iOS safe area top color fill */
+.top-bar.orange::before{content:'';position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top,44px);background:var(--accent);z-index:50;pointer-events:none;}
+.top-bar.dark::before{content:'';position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top,44px);background:var(--text);z-index:50;pointer-events:none;}
+.top-bar{padding:calc(env(safe-area-inset-top,44px) + 14px) 20px 16px;display:flex;align-items:center;gap:12px;}
+.top-bar.dark{background:var(--text);}
+.top-bar.orange{background:var(--accent);}
+.screen{display:none;flex-direction:column;min-height:100vh;min-height:100dvh;}
+.screen.active{display:flex;}
+#screen-loading{position:fixed;inset:0;z-index:999;background:var(--bg);display:none;flex-direction:column;}
+#screen-loading.active{display:flex;}
+
+/* ROLE SCREEN */
+.role-header{padding:calc(env(safe-area-inset-top,44px) + 40px) 24px 0;}
+.label-pill{display:inline-block;border:1.5px solid var(--text);border-radius:100px;font-size:13px;font-weight:700;letter-spacing:0;padding:6px 16px;color:var(--text);text-transform:uppercase;}
+.big-title{font-size:52px;font-weight:900;color:var(--text);line-height:1.05;margin-top:18px;letter-spacing:-2px;}
+.big-title span{color:var(--accent);}
+.big-title .line2{display:block;}
+.orange-bar{width:44px;height:5px;background:var(--accent);border-radius:2px;margin-top:20px;}
+.sub-text{font-size:17px;color:var(--muted);margin-top:12px;line-height:1.6;}
+
+.role-cards{display:flex;gap:14px;padding:24px 20px 0;}
+.role-card{flex:1;background:var(--card);border-radius:22px;padding:26px 14px;text-align:center;cursor:pointer;border:1.5px solid transparent;transition:all .18s;}
+.role-card:active{border-color:var(--accent);transform:scale(.97);}
+.role-card-name{font-size:20px;font-weight:800;color:var(--text);margin-top:12px;}
+.role-card-sub{font-size:13px;color:var(--muted);margin-top:5px;}
+
+/* BALANCE */
+.balance-card{background:var(--accent);border-radius:20px;padding:20px;color:white;margin:0 18px 14px;}
+.balance-label{font-size:12px;font-weight:700;letter-spacing:0;opacity:.75;text-transform:uppercase;}
+.balance-amount{font-size:38px;font-weight:900;letter-spacing:-1px;margin:5px 0 2px;}
+.balance-tagline{font-size:13px;opacity:.8;font-style:italic;}
+.balance-today-row{display:flex;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.2);}
+.balance-today-label{font-size:12px;opacity:.7;flex:1;}
+.balance-today-val{font-size:15px;font-weight:800;}
+
+/* STATS */
+.stats-row{display:flex;gap:8px;padding:0 18px 12px;}
+.stat-card{flex:1;background:var(--card);border-radius:12px;padding:11px 10px;border:1px solid var(--border);}
+.stat-label{font-size:11px;font-weight:700;letter-spacing:0;color:var(--muted);text-transform:uppercase;margin-bottom:4px;}
+.stat-val{font-size:18px;font-weight:900;color:var(--text);}
+.stat-val.orange{color:var(--accent);}
+
+/* TABS */
+.tab-bar{display:flex;gap:5px;padding:0 18px 12px;}
+.tab{flex:1;padding:8px 4px;text-align:center;font-size:13px;font-weight:700;cursor:pointer;border-radius:10px;border:none;background:transparent;color:var(--muted);transition:all .15s;font-family:inherit;letter-spacing:0;}
+.tab.active{background:var(--card);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.08);}
+
+/* SECTION */
+.section{padding:0 18px 12px;}
+.section-label{font-size:13px;font-weight:700;letter-spacing:0;color:var(--muted);text-transform:uppercase;margin-bottom:8px;}
+
+/* TASK CARD */
+.task-card{background:var(--card);border-radius:14px;padding:13px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;border:1px solid var(--border);}
+.task-card.pending-card{background:#fffaf6;border-color:#f0d9c8;}
+.task-card.done-card{background:#f7f7f7;border-color:#e8e8e8;opacity:.75;}
+.task-icon-wrap{width:40px;height:40px;border-radius:11px;background:var(--accent-light);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.task-icon-wrap.pending{background:var(--amber-light);}
+.task-icon-wrap.done{background:#ededed;}
+.task-info{flex:1;min-width:0;}
+.task-name{font-size:15px;font-weight:700;color:var(--text);}
+.task-name.done{color:#bbb;text-decoration:line-through;}
+.task-reward{font-size:13px;color:var(--accent);font-weight:600;margin-top:2px;}
+.task-reward.pending{color:var(--amber);}
+.task-reward.done{color:#ccc;}
+
+/* INFO BTN */
+.info-btn{width:20px;height:20px;border-radius:50%;background:var(--bg);border:1.5px solid var(--border);color:var(--muted);font-size:11px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:inherit;}
+
+/* BTN */
+.btn-done{background:var(--text);color:white;font-size:13px;padding:8px 12px;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;}
+.btn-done:active{opacity:.8;}
+.btn-pending-tag{background:var(--amber-light);color:var(--amber);font-size:12px;padding:7px 10px;border:none;border-radius:10px;font-weight:700;white-space:nowrap;}
+.btn-done-tag{background:#ededed;color:#bbb;font-size:12px;padding:7px 10px;border:none;border-radius:10px;font-weight:700;}
+.btn-approve{background:var(--accent);color:white;flex:1;border:none;border-radius:10px;padding:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+.btn-approve:active{opacity:.8;}
+.btn-reject{background:var(--card);color:var(--red);border:1.5px solid var(--red);flex:1;border-radius:10px;padding:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+.btn-remove{background:var(--bg);color:var(--muted);border:none;border-radius:8px;padding:7px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;}
+.btn-remove:active{opacity:.7;}
+.btn-primary-full{background:var(--text);color:white;width:100%;padding:13px;font-size:14px;border-radius:13px;border:none;cursor:pointer;font-family:inherit;font-weight:700;display:flex;align-items:center;justify-content:center;gap:7px;transition:opacity .15s;}
+.btn-primary-full:active{opacity:.8;}
+.btn-accent-full{background:var(--accent);color:white;width:100%;padding:13px;font-size:14px;border-radius:13px;border:none;cursor:pointer;font-family:inherit;font-weight:700;display:flex;align-items:center;justify-content:center;gap:7px;transition:opacity .15s;}
+.btn-accent-full:active{opacity:.8;}
+.btn-outline-full{background:transparent;color:var(--text);width:100%;padding:12px;font-size:14px;border-radius:13px;border:1.5px solid var(--border);cursor:pointer;font-family:inherit;font-weight:600;transition:background .15s;}
+.btn-outline-full:active{background:var(--border);}
+
+/* BOTTOM NAV */
+.bottom-nav{margin-top:auto;background:var(--card);border-top:1px solid var(--border);display:flex;flex-direction:column;position:sticky;bottom:0;}
+.bottom-nav-items{display:flex;padding:6px 0 6px;}
+.bottom-nav-safe{height:env(safe-area-inset-bottom,0px);background:var(--card);}
+/* Also fill the very bottom of viewport */
+.app::after{content:'';position:fixed;bottom:0;left:0;right:0;height:env(safe-area-inset-bottom,0px);background:var(--safe-area-color,#EEEBE4);z-index:10;pointer-events:none;}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:5px 0;border:none;background:transparent;color:var(--muted);font-size:11px;font-weight:600;transition:color .15s;font-family:inherit;}
+.nav-item.active{color:var(--accent);}
+.nav-item.active svg{stroke:var(--accent);}
+.nav-item svg{stroke:var(--muted);transition:stroke .15s;}
+
+/* HISTORY */
+.history-group{}
+.history-group-hdr{display:flex;align-items:center;gap:8px;padding:10px 0 6px;cursor:pointer;user-select:none;}
+.history-group-label{font-size:13px;font-weight:700;color:var(--muted);}
+.history-group-arrow{font-size:10px;color:var(--muted);transition:transform .2s;}
+.history-group-arrow.open{transform:rotate(90deg);}
+.history-group-body{}
+.history-item{display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px solid var(--border);}
+.history-icon-wrap{width:36px;height:36px;border-radius:9px;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.history-name{font-size:14px;font-weight:700;color:var(--text);}
+.history-date{font-size:12px;color:var(--muted);margin-top:1px;}
+.history-amount{font-size:15px;font-weight:800;}
+.amount-plus{color:var(--green);}
+.amount-minus{color:var(--red);}
+
+/* REVIEW */
+.review-card{background:var(--card);border-radius:14px;padding:13px 14px;margin-bottom:8px;border:1px solid var(--border);}
+.review-row{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+.review-actions{display:flex;gap:8px;}
+.withdraw-card{background:var(--amber-light);border-radius:14px;padding:13px 14px;margin-bottom:8px;border:1.5px solid #E8C878;}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:flex-end;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--bg);border-radius:26px 26px 0 0;padding:10px 20px 44px;width:100%;animation:slideUp .22s ease;}
+@keyframes slideUp{from{transform:translateY(40px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+.modal-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 20px;}
+.modal-title{font-size:20px;font-weight:900;margin-bottom:6px;color:var(--text);}
+.modal-sub{font-size:14px;color:var(--muted);margin-bottom:16px;line-height:1.5;}
+
+/* FORM */
+.form-group{margin-bottom:13px;}
+.form-label{font-size:12px;font-weight:700;letter-spacing:0;color:var(--muted);text-transform:uppercase;margin-bottom:6px;display:block;}
+.form-input{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:12px;font-size:15px;color:var(--text);outline:none;transition:border-color .15s;background:var(--card);font-family:inherit;}
+.form-input:focus{border-color:var(--accent);}
+textarea.form-input{resize:none;height:72px;line-height:1.5;}
+
+/* ICON/SUBJECT */
+.icon-picker{display:flex;gap:7px;flex-wrap:wrap;}
+.icon-opt{width:44px;height:44px;border-radius:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:1.5px solid var(--border);background:var(--card);transition:all .15s;}
+.icon-opt.selected{border-color:var(--accent);background:var(--accent-light);}
+.subject-chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:4px;}
+.subject-chip{padding:9px 14px;border-radius:100px;border:1.5px solid var(--border);background:var(--card);font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;transition:all .15s;font-family:inherit;}
+.subject-chip.selected{background:var(--accent);color:white;border-color:var(--accent);}
+
+/* PIN */
+.pin-dots{display:flex;gap:14px;justify-content:center;margin:18px 0 6px;}
+.pin-dot{width:15px;height:15px;border-radius:50%;border:2px solid var(--border);background:transparent;transition:all .2s;}
+.pin-dot.filled{background:var(--accent);border-color:var(--accent);}
+.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:16px 28px 36px;}
+.pin-btn{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;font-size:20px;font-weight:700;color:var(--text);cursor:pointer;font-family:inherit;transition:all .15s;}
+.pin-btn:active{background:var(--border);transform:scale(.95);}
+
+/* AVATAR */
+.avatar-picker{display:flex;gap:7px;flex-wrap:wrap;}
+.avatar-opt{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;border:2px solid var(--border);background:var(--card);transition:all .15s;overflow:hidden;}
+.avatar-opt.selected{border-color:var(--accent);background:var(--accent-light);}
+.avatar-opt img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.avatar-big{width:78px;height:78px;border-radius:50%;background:var(--accent-light);border:3px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:38px;margin:0 auto 6px;overflow:hidden;cursor:pointer;}
+.avatar-big img{width:100%;height:100%;object-fit:cover;}
+
+/* PROGRESS */
+.daily-progress{display:flex;align-items:center;gap:8px;background:var(--card);border-radius:11px;padding:10px 13px;margin:0 18px 12px;border:1px solid var(--border);}
+.progress-bar-wrap{flex:1;height:5px;background:var(--bg);border-radius:3px;overflow:hidden;}
+.progress-bar-fill{height:100%;background:var(--accent);border-radius:3px;transition:width .4s ease;}
+
+/* TOOLTIP */
+.tooltip-box{background:var(--text);color:white;border-radius:11px;padding:10px 14px;font-size:13px;line-height:1.6;margin-top:6px;margin-bottom:12px;display:none;}
+.tooltip-box.show{display:block;}
+
+/* SCROLL */
+.scroll-content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:8px;}
+
+/* EMPTY */
+.empty-state{text-align:center;padding:36px 18px;}
+.empty-icon{display:flex;justify-content:center;margin-bottom:10px;opacity:.2;}
+.empty-text{font-size:14px;color:var(--muted);font-weight:600;}
+
+/* CENTER TOAST */
+.toast{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(26,26,26,.92);color:white;padding:14px 24px;border-radius:16px;font-size:14px;z-index:300;opacity:0;transition:opacity .25s;pointer-events:none;font-weight:600;text-align:center;max-width:260px;line-height:1.5;}
+.toast.show{opacity:1;}
+
+/* iOS safe area bottom fill for role/login screens */
+#screen-role::after, #screen-login::after {
+  content:'';display:block;
+  height:env(safe-area-inset-bottom,0px);
+  background:var(--bg);
+  position:fixed;bottom:0;left:0;right:0;z-index:1;
+}
+
+@keyframes loading{0%{width:0%;margin-left:0;}50%{width:100%;margin-left:0;}100%{width:0%;margin-left:100%;}}
+
+/* SWITCH BTN */
+.switch-btn{background:rgba(255,255,255,.18);border:1.5px solid rgba(255,255,255,.3);color:white;border-radius:100px;padding:6px 12px;font-size:12px;cursor:pointer;font-weight:700;font-family:inherit;}
+.fun-tag{display:inline-block;background:var(--accent-light);color:var(--accent);font-size:10px;font-weight:700;padding:2px 8px;border-radius:100px;margin-left:6px;vertical-align:middle;}
+
+/* DAILY EDIT LIST */
+.daily-edit-item{background:var(--card);border-radius:14px;padding:13px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;border:1px solid var(--border);}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ===== 登入畫面 ===== -->
+<div class="screen active" id="screen-login">
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 28px;">
+    <div style="font-size:72px;margin-bottom:16px;">🐱</div>
+    <div style="font-size:32px;font-weight:900;color:var(--text);letter-spacing:-1px;text-align:center;line-height:1.1;">貓貓<br><span style="color:var(--accent);">摸魚</span>任務</div>
+    <div style="font-size:14px;color:var(--muted);margin-top:12px;margin-bottom:48px;text-align:center;line-height:1.6;">貓貓摸魚中，存款穩定成長中</div>
+    <button onclick="loginWithGoogle()" style="display:flex;align-items:center;gap:12px;background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:14px 24px;font-size:15px;font-weight:700;color:var(--text);cursor:pointer;font-family:inherit;width:100%;justify-content:center;transition:all .15s;">
+      <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      使用 Google 帳號登入
+    </button>
+    <div style="font-size:12px;color:var(--muted);margin-top:20px;text-align:center;line-height:1.6;">⚠ 本系統鼓勵正當摸魚<br>資料雲端同步，兩支手機即時共享</div>
+  </div>
+</div>
+
+<!-- ===== 選角色 ===== -->
+<div class="screen" id="screen-role" style="min-height:100vh;min-height:100dvh;">
+  <div class="role-header">
+    <span class="label-pill">摸魚也能變有錢</span>
+    <div class="big-title">貓貓<br><span>摸魚</span>任務</div>
+    <div class="orange-bar"></div>
+    <div class="sub-text">貓貓摸魚中，存款穩定成長中</div>
+  </div>
+  <div class="role-cards">
+    <div class="role-card" onclick="selectRole('kid')">
+      <div style="display:flex;justify-content:center;font-size:52px;">🐱</div>
+      <div class="role-card-name">貓小孩</div>
+      <div class="role-card-sub">完成任務·領獎勵</div>
+    </div>
+    <div class="role-card" onclick="selectRole('mom')">
+      <div style="display:flex;justify-content:center;font-size:52px;">😼</div>
+      <div class="role-card-name">貓BOSS</div>
+      <div class="role-card-sub">設定任務·審核獎勵</div>
+    </div>
+  </div>
+  <div style="flex:1;background:var(--bg);"></div>
+</div>
+
+<!-- ===== 媽媽密碼 ===== -->
+<div class="screen" id="screen-mom-pin" style="background:var(--bg);">
+  <div style="padding:calc(env(safe-area-inset-top,44px) + 30px) 28px 0;text-align:center;flex:1;">
+    <div style="font-size:30px;margin-bottom:10px;">😼</div>
+    <div style="font-size:20px;font-weight:900;color:var(--text);" id="pin-title">貓BOSS 密碼</div>
+    <div style="font-size:13px;color:var(--muted);margin-top:5px;" id="pin-subtitle">⚠ 貓貓已監控你的努力</div>
+    <div class="pin-dots" id="pin-dots">
+      <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
+      <div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div>
+    </div>
+    <div style="font-size:12px;color:var(--red);min-height:16px;" id="pin-error"></div>
+  </div>
+  <div class="pin-pad">
+    <button class="pin-btn" onclick="pinInput('1')">1</button>
+    <button class="pin-btn" onclick="pinInput('2')">2</button>
+    <button class="pin-btn" onclick="pinInput('3')">3</button>
+    <button class="pin-btn" onclick="pinInput('4')">4</button>
+    <button class="pin-btn" onclick="pinInput('5')">5</button>
+    <button class="pin-btn" onclick="pinInput('6')">6</button>
+    <button class="pin-btn" onclick="pinInput('7')">7</button>
+    <button class="pin-btn" onclick="pinInput('8')">8</button>
+    <button class="pin-btn" onclick="pinInput('9')">9</button>
+    <button class="pin-btn" onclick="goHome()" style="font-size:12px;color:var(--muted);">取消</button>
+    <button class="pin-btn" onclick="pinInput('0')">0</button>
+    <button class="pin-btn" onclick="pinDel()" style="font-size:15px;color:var(--muted);">⌫</button>
+  </div>
+  <div style="flex:1;background:var(--bg);"></div>
+</div>
+
+<!-- ===== 小孩主畫面 ===== -->
+<div class="screen" id="screen-kid">
+  <div class="top-bar orange">
+    <div id="kid-avatar-header" style="width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:21px;flex-shrink:0;overflow:hidden;"></div>
+    <div style="flex:1;margin-left:9px;">
+      <div style="font-size:16px;font-weight:800;color:white;" id="kid-name-header">貓小孩</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.75);" id="kid-date-header"></div>
+    </div>
+    <button class="switch-btn" onclick="goHome()">切換</button>
+  </div>
+
+  <div style="margin:16px 18px 0;">
+    <div class="balance-card" style="margin:0;">
+      <div class="balance-label">摸魚收益</div>
+      <div class="balance-amount" id="kid-balance">NT$ 0</div>
+      <div class="balance-tagline" id="kid-tagline">貓貓摸魚中，存款穩定成長中</div>
+      <div class="balance-today-row">
+        <div class="balance-today-label">今日摸魚收入</div>
+        <div class="balance-today-val" id="kid-today-earned">NT$ 0</div>
+      </div>
+      <button onclick="openWithdrawModal()" style="margin-top:13px;background:white;color:var(--accent);border:none;border-radius:11px;padding:10px;width:100%;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:5px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+        申請領現金
+      </button>
+    </div>
+  </div>
+
+  <div class="daily-progress" style="margin-top:12px;">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    <div style="font-size:12px;font-weight:700;color:var(--text);">摸魚進度</div>
+    <div class="progress-bar-wrap"><div class="progress-bar-fill" id="kid-progress-bar" style="width:0%"></div></div>
+    <div style="font-size:11px;font-weight:700;color:var(--accent);" id="kid-progress-text">0/0</div>
+  </div>
+
+  <div class="tab-bar">
+    <button class="tab active" id="kid-tab-daily" onclick="switchKidTab('daily')">今日任務</button>
+    <button class="tab" id="kid-tab-deduct" onclick="switchKidTab('deduct')">扣款<span id="kid-deduct-badge" style="display:none;background:var(--red);color:white;border-radius:10px;padding:1px 5px;font-size:10px;margin-left:2px;"></span></button>
+    <button class="tab" id="kid-tab-history" onclick="switchKidTab('history')">摸魚紀錄</button>
+  </div>
+
+  <!-- 今日任務（含額外） -->
+  <div class="scroll-content" id="kid-daily-panel">
+    <div style="padding:4px 18px 10px;display:flex;gap:8px;">
+      <button class="btn-accent-full" style="flex:1;font-size:12px;padding:10px 6px;" onclick="openKidAddExamModal()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        新增評量任務
+      </button>
+      <button class="btn-primary-full" style="flex:1;font-size:12px;padding:10px 6px;" onclick="openKidAddExtraModal()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        新增額外任務
+      </button>
+    </div>
+    <div class="section"><div id="kid-daily-list"></div></div>
+  </div>
+
+  <!-- 扣款頁 -->
+  <div class="scroll-content" id="kid-deduct-panel" style="display:none;">
+    <div class="section" style="padding-top:4px;">
+      <div class="section-label" style="color:var(--red);">待確認扣款</div>
+      <div id="kid-deduction-list"></div>
+    </div>
+  </div>
+
+  <!-- 摸魚紀錄 -->
+  <div class="scroll-content" id="kid-history-panel" style="display:none;">
+    <div class="section"><div id="kid-history-list"></div></div>
+  </div>
+
+  <div class="bottom-nav">
+    <div class="bottom-nav-items">
+      <button class="nav-item active" id="kid-nav-main" onclick="switchKidNav('main')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12L12 3l9 9"/><path d="M9 21V12h6v9"/></svg>
+        主頁
+      </button>
+      <button class="nav-item" id="kid-nav-profile" onclick="switchKidNav('profile')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20v-1a8 8 0 0116 0v1"/></svg>
+        設定
+      </button>
+    </div>
+    <div class="bottom-nav-safe"></div>
+  </div>
+</div>
+
+<!-- ===== 媽媽主畫面 ===== -->
+<div class="screen" id="screen-mom">
+  <div class="top-bar dark">
+    <div id="mom-avatar-header" style="width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:21px;flex-shrink:0;overflow:hidden;"></div>
+    <div style="flex:1;margin-left:9px;">
+      <div style="font-size:16px;font-weight:800;color:white;" id="mom-name-header">貓BOSS</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.45);">⚠ 本系統鼓勵正當摸魚</div>
+    </div>
+    <button class="switch-btn" onclick="goHome()">切換</button>
+  </div>
+
+  <div class="stats-row" style="margin-top:16px;">
+    <div class="stat-card" style="flex:2;">
+      <div class="stat-label">貓小孩總存款</div>
+      <div class="stat-val orange" style="font-size:26px;" id="mom-balance-val">NT$0</div>
+      <div style="display:flex;align-items:center;gap:6px;margin-top:5px;padding-top:5px;border-top:1px solid var(--border);">
+        <div style="font-size:10px;font-weight:700;letter-spacing:0;color:var(--muted);text-transform:uppercase;">今日收入</div>
+        <div style="font-size:13px;font-weight:800;color:var(--accent);" id="mom-today-val">NT$0</div>
+      </div>
+    </div>
+    <div class="stat-card" style="flex:1;cursor:pointer;" onclick="switchMomTab('review')">
+      <div class="stat-label">待審核</div>
+      <div class="stat-val" style="font-size:26px;color:var(--accent);" id="mom-pending-val">0</div>
+    </div>
+  </div>
+
+  <div class="tab-bar">
+    <button class="tab active" id="mom-tab-review" onclick="switchMomTab('review')">審核<span id="review-badge"></span></button>
+    <button class="tab" id="mom-tab-tasks" onclick="switchMomTab('tasks')">任務</button>
+    <button class="tab" id="mom-tab-deduct" onclick="switchMomTab('deduct')">扣款</button>
+    <button class="tab" id="mom-tab-history" onclick="switchMomTab('history')">摸魚紀錄</button>
+  </div>
+
+  <!-- 審核 panel -->
+  <div class="scroll-content" id="mom-review-panel">
+    <div class="section" style="padding-top:4px;">
+      <div class="section-label">待審核任務</div>
+      <div id="mom-review-list"></div>
+    </div>
+    <div class="section">
+      <div class="section-label">提領申請</div>
+      <div id="mom-withdraw-list"></div>
+    </div>
+    <div class="section">
+      <div class="section-label">今日未完成項目</div>
+      <div id="mom-incomplete-list"></div>
+    </div>
+  </div>
+
+  <!-- 任務 panel -->
+  <div class="scroll-content" id="mom-tasks-panel" style="display:none;">
+    <div style="padding:4px 18px 12px;">
+      <button class="btn-primary-full" onclick="openAddTaskModal()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        新增額外任務
+      </button>
+    </div>
+    <div id="mom-task-list-section">
+      <div class="section">
+        <div class="section-label">額外任務清單</div>
+        <div id="mom-task-list"></div>
+      </div>
+    </div>
+    <div style="padding:4px 18px 10px;font-size:12px;color:var(--muted);line-height:1.6;">點「編輯」可修改說明文字與獎勵金額。</div>
+    <div style="padding:0 18px 8px;">
+      <div class="section-label">平日任務（一～五）</div>
+      <div id="mom-weekday-list"></div>
+    </div>
+    <div style="padding:0 18px 14px;">
+      <div class="section-label">假日任務（六、日）</div>
+      <div id="mom-weekend-list"></div>
+    </div>
+  </div>
+
+  <!-- 扣款 panel -->
+  <div class="scroll-content" id="mom-deduct-panel" style="display:none;">
+    <div style="padding:4px 18px 12px;">
+      <button class="btn-primary-full" onclick="openDeductModal()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        新增扣款
+      </button>
+    </div>
+    <div class="section">
+      <div class="section-label">待確認扣款</div>
+      <div id="mom-deduction-list"></div>
+    </div>
+  </div>
+
+  <!-- 摸魚紀錄 panel -->
+  <div class="scroll-content" id="mom-history-panel" style="display:none;">
+    <div class="section"><div id="mom-history-list"></div></div>
+  </div>
+
+  <div class="bottom-nav">
+    <div class="bottom-nav-items">
+      <button class="nav-item active" id="mom-nav-main" onclick="switchMomNav('main')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12L12 3l9 9"/><path d="M9 21V12h6v9"/></svg>
+        主頁
+      </button>
+      <button class="nav-item" id="mom-nav-profile" onclick="switchMomNav('profile')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20v-1a8 8 0 0116 0v1"/></svg>
+        設定
+      </button>
+    </div>
+    <div class="bottom-nav-safe"></div>
+  </div>
+</div>
+
+<!-- ===== 小孩設定 ===== -->
+<div class="screen" id="screen-kid-profile">
+  <div style="background:var(--bg);padding:52px 20px 16px;font-size:19px;font-weight:900;color:var(--text);">貓小孩設定</div>
+  <div style="padding:0 20px 24px;">
+    <div style="text-align:center;margin-bottom:20px;">
+      <div class="avatar-big" id="kid-avatar-big" onclick="document.getElementById('kid-img-upload').click()"></div>
+      <div style="font-size:11px;color:var(--muted);">點擊上傳照片</div>
+      <input type="file" id="kid-img-upload" accept="image/*" style="display:none" onchange="uploadAvatar('kid',this)">
+    </div>
+    <div class="form-group">
+      <label class="form-label">名字</label>
+      <input class="form-input" id="kid-name-input" placeholder="輸入名字..."/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">預設頭像</label>
+      <div class="avatar-picker" id="kid-avatar-picker"></div>
+    </div>
+    <!-- 加入家庭 -->
+    <div style="background:var(--accent-light);border-radius:14px;padding:16px;margin-bottom:14px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:0;color:var(--accent);text-transform:uppercase;margin-bottom:8px;">加入家庭</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5;">輸入媽媽給你的邀請碼，就能和媽媽共用同一份資料</div>
+      <div style="display:flex;gap:8px;">
+        <input class="form-input" id="family-code-input" placeholder="輸入邀請碼..." style="flex:1;font-size:14px;padding:10px 12px;"/>
+        <button onclick="joinFamily()" style="background:var(--accent);color:white;border:none;border-radius:12px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">加入</button>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-top:8px;">目前家庭ID：<span id="kid-family-id" style="font-weight:700;color:var(--text);"></span></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:9px;">
+      <button class="btn-primary-full" onclick="saveKidProfile()">儲存設定</button>
+      <button class="btn-outline-full" onclick="switchKidNav('main')">返回</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 媽媽設定 ===== -->
+<div class="screen" id="screen-mom-profile">
+  <div style="background:var(--bg);padding:52px 20px 16px;font-size:19px;font-weight:900;color:var(--text);">貓BOSS 設定</div>
+  <div style="padding:0 20px 24px;">
+    <div style="text-align:center;margin-bottom:20px;">
+      <div class="avatar-big" id="mom-avatar-big" onclick="document.getElementById('mom-img-upload').click()"></div>
+      <div style="font-size:11px;color:var(--muted);">點擊上傳照片</div>
+      <input type="file" id="mom-img-upload" accept="image/*" style="display:none" onchange="uploadAvatar('mom',this)">
+    </div>
+    <div class="form-group">
+      <label class="form-label">名字</label>
+      <input class="form-input" id="mom-name-input" placeholder="輸入名字..."/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">預設頭像</label>
+      <div class="avatar-picker" id="mom-avatar-picker"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">修改密碼（4位數字）</label>
+      <input class="form-input" id="mom-new-pin" type="number" placeholder="留空表示不修改"/>
+    </div>
+    <!-- 家庭邀請碼 -->
+    <div style="background:var(--accent-light);border-radius:14px;padding:16px;margin-bottom:14px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:0;color:var(--accent);text-transform:uppercase;margin-bottom:8px;">家庭邀請碼</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5;">把這個邀請碼給小孩，讓他在設定頁輸入，就能共用同一份資料</div>
+      <div style="background:var(--card);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px;">
+        <div style="font-size:18px;font-weight:900;color:var(--text);letter-spacing:0;flex:1;" id="mom-family-code">載入中...</div>
+        <button onclick="copyFamilyCode()" style="background:var(--accent);color:white;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">複製</button>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:9px;">
+      <button class="btn-primary-full" onclick="saveMomProfile()">儲存設定</button>
+      <button class="btn-outline-full" onclick="switchMomNav('main')">返回</button>
+    </div>
+  </div>
+</div>
+</div><!-- .app -->
+
+<!-- ===== MODALS ===== -->
+
+<!-- 扣款 Modal -->
+<div class="modal-overlay" id="modal-deduct">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">新增扣款</div>
+    <div class="modal-sub" style="color:var(--muted);">輸入扣款原因和金額，小孩確認後自動扣除</div>
+    <div class="form-group">
+      <label class="form-label">扣款名稱</label>
+      <input class="form-input" id="deduct-name-input" placeholder="例：代墊文具費..."/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">說明（選填）</label>
+      <input class="form-input" id="deduct-desc-input" placeholder="補充說明..."/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">扣款金額（NT$）</label>
+      <input class="form-input" id="deduct-amount-input" type="number" placeholder="例：50" min="1"/>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn-outline-full" style="flex:1;" onclick="closeModal('modal-deduct')">取消</button>
+      <button class="btn-primary-full" style="flex:2;background:var(--red);" onclick="submitDeduction()">送出扣款</button>
+    </div>
+  </div>
+</div>
+
+<!-- 睡覺：今日累計 Modal -->
+<div class="modal-overlay" id="modal-sleep-summary">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">準備睡覺囉 🌙</div>
+    <div class="modal-sub">今天也很努力，貓貓正在偷偷變強</div>
+    <div style="background:var(--accent-light);border-radius:14px;padding:18px;margin-bottom:16px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:0;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">今日摸魚收入</div>
+      <div style="font-size:36px;font-weight:900;color:var(--accent);" id="sleep-today-earned">NT$ 0</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px;" id="sleep-tasks-done">完成 0 項任務</div>
+    </div>
+    <div style="background:var(--card);border-radius:14px;padding:16px;margin-bottom:16px;border:1px solid var(--border);">
+      <div style="font-size:11px;font-weight:700;letter-spacing:0;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">總存款</div>
+      <div style="font-size:24px;font-weight:900;color:var(--text);" id="sleep-total-balance">NT$ 0</div>
+    </div>
+    <div style="font-size:13px;color:var(--muted);text-align:center;margin-bottom:14px;font-style:italic;">金幣累積中，請繼續摸魚 🐾</div>
+    <button class="btn-accent-full" onclick="confirmSleepTask()">確認完成睡覺任務</button>
+  </div>
+</div>
+
+<!-- 小孩自行新增評量 -->
+<div class="modal-overlay" id="modal-kid-add-exam">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">新增評量任務</div>
+    <div class="modal-sub">加入清單後，點「完成」才送審 🐾</div>
+    <div class="form-group">
+      <label class="form-label">選擇科目（可跳過）</label>
+      <div class="subject-chips" id="kid-exam-subject-chips">
+        <button class="subject-chip" onclick="toggleKidExamSubject(this,'國語')">國語</button>
+        <button class="subject-chip" onclick="toggleKidExamSubject(this,'數學')">數學</button>
+        <button class="subject-chip" onclick="toggleKidExamSubject(this,'英文')">英文</button>
+        <button class="subject-chip" onclick="toggleKidExamSubject(this,'社會')">社會</button>
+        <button class="subject-chip" onclick="toggleKidExamSubject(this,'自然')">自然</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">希望獎勵（NT$）</label>
+      <input class="form-input" id="kid-exam-amount-input" type="number" placeholder="例：20" min="1"/>
+    </div>
+    <div style="display:flex;gap:9px;">
+      <button class="btn-outline-full" style="flex:1;" onclick="closeModal('modal-kid-add-exam')">取消</button>
+      <button class="btn-accent-full" style="flex:2;" onclick="kidAddExam()">加入清單</button>
+    </div>
+  </div>
+</div>
+
+<!-- 新增額外任務（媽媽） -->
+<div class="modal-overlay" id="modal-add-task">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">新增額外任務</div>
+    <div class="form-group">
+      <label class="form-label">任務名稱</label>
+      <input class="form-input" id="task-name-input" placeholder="例：整理房間..."/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">說明（小 i 顯示）</label>
+      <textarea class="form-input" id="task-desc-input" placeholder="說明這個任務的細節..."></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">選擇圖示</label>
+      <div class="icon-picker" id="task-icon-picker"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">獎勵金額（NT$）</label>
+      <input class="form-input" id="task-amount-input" type="number" placeholder="例：20" min="1"/>
+    </div>
+    <div style="display:flex;gap:9px;">
+      <button class="btn-outline-full" style="flex:1;" onclick="closeModal('modal-add-task')">取消</button>
+      <button class="btn-primary-full" style="flex:2;" onclick="addTask()">新增</button>
+    </div>
+  </div>
+</div>
+
+<!-- 小孩新增自訂任務 -->
+<div class="modal-overlay" id="modal-kid-add-task">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">新增額外任務</div>
+    <div class="modal-sub">完成後點「完成」才會送審 🐾</div>
+    <div class="form-group">
+      <label class="form-label">任務名稱</label>
+      <input class="form-input" id="kid-self-name" placeholder="例：幫忙倒垃圾..."/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">說明（選填）</label>
+      <input class="form-input" id="kid-self-desc" placeholder="補充說明..."/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">期望獎勵（NT$）</label>
+      <input class="form-input" id="kid-self-amount" type="number" placeholder="例：20" min="1"/>
+    </div>
+    <div style="display:flex;gap:9px;">
+      <button class="btn-outline-full" style="flex:1;" onclick="closeModal('modal-kid-add-task')">取消</button>
+      <button class="btn-accent-full" style="flex:2;" onclick="kidAddSelfTask()">加入清單</button>
+    </div>
+  </div>
+</div>
+
+<!-- 提領 -->
+<div class="modal-overlay" id="modal-withdraw">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">貓貓的小金庫</div>
+    <div class="modal-sub">用努力換想要的東西 🪙</div>
+    <div style="background:var(--accent-light);border-radius:13px;padding:14px;margin-bottom:16px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:0;color:var(--muted);text-transform:uppercase;">可提領金額</div>
+      <div style="font-size:30px;font-weight:900;color:var(--accent);margin-top:3px;" id="withdraw-available">NT$ 0</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">申請金額（NT$）</label>
+      <input class="form-input" id="withdraw-amount-input" type="number" placeholder="輸入金額..." min="1"/>
+    </div>
+    <div style="display:flex;gap:9px;">
+      <button class="btn-outline-full" style="flex:1;" onclick="closeModal('modal-withdraw')">取消</button>
+      <button class="btn-accent-full" style="flex:2;" onclick="submitWithdraw()">兌換你的願望吧</button>
+    </div>
+  </div>
+</div>
+
+<!-- 選科目 -->
+<div class="modal-overlay" id="modal-subject">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">評量完成！</div>
+    <div class="modal-sub">專注中…金幣準備進帳 🪙<br>選擇科目（可跳過）</div>
+    <div class="subject-chips" id="subject-chips">
+      <button class="subject-chip" onclick="toggleSubject(this,'國語')">國語</button>
+      <button class="subject-chip" onclick="toggleSubject(this,'數學')">數學</button>
+      <button class="subject-chip" onclick="toggleSubject(this,'英文')">英文</button>
+      <button class="subject-chip" onclick="toggleSubject(this,'社會')">社會</button>
+      <button class="subject-chip" onclick="toggleSubject(this,'自然')">自然</button>
+    </div>
+    <div style="margin-top:18px;display:flex;gap:9px;">
+      <button class="btn-outline-full" style="flex:1;" onclick="confirmSubject(false)">跳過</button>
+      <button class="btn-accent-full" style="flex:2;" onclick="confirmSubject(true)">確認完成</button>
+    </div>
+  </div>
+</div>
+
+<!-- 編輯每日任務 -->
+<div class="modal-overlay" id="modal-edit-daily">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="edit-daily-title">編輯任務</div>
+    <div class="form-group">
+      <label class="form-label">說明（小 i 內容）</label>
+      <textarea class="form-input" id="edit-daily-desc" placeholder="說明內容..."></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">獎勵金額（NT$）</label>
+      <input class="form-input" id="edit-daily-amount" type="number" min="1"/>
+    </div>
+    <div style="display:flex;gap:9px;">
+      <button class="btn-outline-full" style="flex:1;" onclick="closeModal('modal-edit-daily')">取消</button>
+      <button class="btn-primary-full" style="flex:2;" onclick="saveDailyEdit()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 設定密碼 -->
+<div class="modal-overlay" id="modal-set-pin">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">設定貓BOSS密碼</div>
+    <div class="modal-sub">⚠ 貓貓已監控你的努力<br>請設定4位數字密碼</div>
+    <div class="form-group">
+      <label class="form-label">密碼（4位數字）</label>
+      <input class="form-input" id="setup-pin-input" type="number" placeholder="例：1234"/>
+    </div>
+    <button class="btn-primary-full" onclick="setupPin()">確認設定</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== ICONS =====
+const ICONS={
+  broom:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 21L17 3"/><path d="M5 21h14"/><path d="M5 17c0-2 2-4 5-4s5 2 5 4"/></svg>`,
+  dish:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="12" rx="9" ry="4"/><path d="M3 12c0 4 4 8 9 8s9-4 9-8"/><line x1="3" y1="12" x2="21" y2="12"/></svg>`,
+  book:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>`,
+  moon:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>`,
+  sun:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`,
+  food:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>`,
+  shower:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16"/><path d="M4 12V6a4 4 0 018 0v6"/><line x1="4" y1="16" x2="4" y2="18"/><line x1="8" y1="16" x2="8" y2="20"/><line x1="12" y1="16" x2="12" y2="18"/><line x1="16" y1="16" x2="16" y2="20"/><line x1="20" y1="16" x2="20" y2="18"/></svg>`,
+  pencil:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`,
+  exam:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="12" y2="17"/></svg>`,
+  star:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
+  music:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>`,
+  coin:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M9 10h4.5a1.5 1.5 0 010 3H9"/></svg>`,
+};
+const ICON_KEYS=Object.keys(ICONS);
+const AVATARS_DEFAULT=['🐱','😸','😺','😻','😼','🙀','😿','😾','🐶','🐕','🦮','🐩','🐾'];
+
+function svg(key,color){
+  return (ICONS[key]||ICONS.star).replace(/stroke-width/g,`stroke="${color}" stroke-width`);
+}
+
+// ===== COPY =====
+const BALANCE_TAGLINES=[
+  '摸魚進度＋1 🐾',
+  '今天也在輕鬆變有錢',
+  '貓貓休息中，金幣持續增加',
+  '耍廢中…但帳戶很努力',
+  '貓貓今日摸魚中…',
+];
+const APPROVE_MSGS=[
+  '今日收入＋{n} 🪙',
+  '摸魚收益已發放！小小努力，大大入帳',
+  '貓貓存款增加中，金幣累積中 🐾',
+  '小小努力，大大入帳 +NT${n}',
+];
+const COMPLETE_MSGS=[
+  '任務完成，貓BOSS審核中…',
+  '貓貓正在偷偷變強 🐾',
+  '看似發呆，其實在升級',
+  '任務中…貓BOSS收到了！',
+];
+
+function randMsg(arr,n){ 
+  let m=arr[Math.floor(Math.random()*arr.length)];
+  return n!==undefined?m.replace('{n}',n):m;
+}
+
+// ===== DEFAULT DAILY =====
+const DEFAULT_DAILY={
+  weekday:[
+    {id:'wd_morning',name:'早晨任務',icon:'sun',desc:'自己起床 / 換衣服 / 刷牙（6:30前）',amount:10,isExam:false},
+    {id:'wd_breakfast',name:'早餐任務',icon:'food',desc:'蛋白質：蛋 / 肉類 / 牛奶 / 豆漿',amount:5,isExam:false},
+    {id:'wd_homework',name:'作業',icon:'pencil',desc:'學校作業完成',amount:10,isExam:false},
+    {id:'wd_exam1',name:'評量第一回',icon:'exam',desc:'完成一回評量（可選擇科目）',amount:20,isExam:true},
+    {id:'wd_exam2',name:'評量第二回',icon:'exam',desc:'完成第二回評量（可選擇科目）',amount:20,isExam:true},
+    {id:'wd_shower',name:'洗澡',icon:'shower',desc:'媽咪回家前完成洗澡',amount:10,isExam:false},
+    {id:'wd_sleep',name:'睡覺',icon:'moon',desc:'10:00前上床睡覺',amount:10,isExam:false},
+  ],
+  weekend:[
+    {id:'we_morning',name:'早晨任務',icon:'sun',desc:'自己起床 / 刷牙（8:30前）',amount:10,isExam:false},
+    {id:'we_breakfast',name:'早餐任務',icon:'food',desc:'蛋白質：蛋 / 肉類 / 牛奶 / 豆漿',amount:5,isExam:false},
+    {id:'we_exam1',name:'評量第一回',icon:'exam',desc:'完成一回評量（可選擇科目）',amount:20,isExam:true},
+    {id:'we_exam2',name:'評量第二回',icon:'exam',desc:'完成第二回評量（可選擇科目）',amount:20,isExam:true},
+    {id:'we_sleep',name:'睡覺',icon:'moon',desc:'10:00前上床睡覺',amount:10,isExam:false},
+  ]
+};
+
+// ===== STATE =====
+let state={
+  kidName:'貓小孩',kidAvatar:'🐱',kidAvatarImg:null,
+  momName:'貓BOSS',momAvatar:'😼',momAvatarImg:null,
+  pin:null,
+  tasks:[],
+  pendingTasks:[],
+  history:[],
+  balance:0,
+  withdrawRequests:[],
+  selectedTaskIcon:'star',
+  nextId:100,
+  dailyConfig:{
+    weekday:JSON.parse(JSON.stringify(DEFAULT_DAILY.weekday)),
+    weekend:JSON.parse(JSON.stringify(DEFAULT_DAILY.weekend)),
+  },
+  dailyState:{},
+  lastResetDate:'',
+};
+
+let pinBuffer='';
+let pendingSubjectTaskId=null;
+let selectedSubject='';
+let editingDailyId=null,editingDailyType='';
+
+function loadState(){try{const s=localStorage.getItem('mao_v5');if(s)Object.assign(state,JSON.parse(s));}catch(e){}}
+function saveState(){try{localStorage.setItem('mao_v5',JSON.stringify(state));}catch(e){}}
+
+function getTodayStr(){const d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();}
+function getDateTimeStr(){
+  const d=new Date(),days=['日','一','二','三','四','五','六'];
+  return d.getFullYear()+'/'+(d.getMonth()+1).toString().padStart(2,'0')+'/'+d.getDate().toString().padStart(2,'0')+
+    ' ('+days[d.getDay()]+') '+d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');
+}
+function getTodayDisplay(){
+  const d=new Date(),days=['日','一','二','三','四','五','六'];
+  return (d.getMonth()+1)+'月'+d.getDate()+'日 (星期'+days[d.getDay()]+')';
+}
+function isWeekend(){const d=new Date().getDay();return d===0||d===6;}
+function getTodayDailyTasks(){return isWeekend()?state.dailyConfig.weekend:state.dailyConfig.weekday;}
+function checkDailyReset(){
+  const today=getTodayStr();
+  if(state.lastResetDate!==today){
+    state.dailyState={};
+    state.kidExtraTasks=[];
+    state.lastResetDate=today;
+    saveState();
+  }
+}
+
+// ===== SCREEN =====
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+  const bgScreens=['screen-role','screen-login','screen-kid-profile','screen-mom-profile','screen-mom-pin','screen-loading'];
+  document.documentElement.style.setProperty('--safe-area-color', bgScreens.includes(id)?'#EEEBE4':'#ffffff');
+}
+function goHome(){showScreen('screen-role');}
+
+function selectRole(role){
+  if(role==='mom'){
+    if(!state.pin){document.getElementById('modal-set-pin').classList.add('open');}
+    else{startPinVerify();}
+  } else {
+    checkDailyReset();
+    showScreen('screen-kid');
+    refreshKid();
+  }
+}
+
+// ===== PIN =====
+function startPinVerify(){
+  pinBuffer='';
+  document.getElementById('pin-error').textContent='';
+  updatePinDots();
+  showScreen('screen-mom-pin');
+}
+function setupPin(){
+  const v=document.getElementById('setup-pin-input').value.trim();
+  if(v.length!==4||isNaN(v)){showToast('請輸入4位數字密碼');return;}
+  state.pin=v;saveState();
+  closeModal('modal-set-pin');startPinVerify();
+}
+function pinInput(n){
+  if(pinBuffer.length>=4)return;
+  pinBuffer+=n;updatePinDots();
+  if(pinBuffer.length===4){
+    setTimeout(()=>{
+      if(pinBuffer===state.pin){pinBuffer='';showScreen('screen-mom');refreshMom();}
+      else{pinBuffer='';updatePinDots();document.getElementById('pin-error').textContent='密碼錯誤，請再試一次';setTimeout(()=>{document.getElementById('pin-error').textContent='';},2000);}
+    },150);
+  }
+}
+function pinDel(){if(pinBuffer.length>0){pinBuffer=pinBuffer.slice(0,-1);updatePinDots();}}
+function updatePinDots(){for(let i=0;i<4;i++)document.getElementById('pd'+i).classList.toggle('filled',i<pinBuffer.length);}
+
+// ===== AVATAR =====
+function renderAvatar(elId,char,img){
+  const el=document.getElementById(elId);if(!el)return;el.innerHTML='';
+  if(img){const i=document.createElement('img');i.src=img;i.style.cssText='width:100%;height:100%;object-fit:cover;border-radius:50%;';el.appendChild(i);}
+  else el.textContent=char||'🐱';
+}
+function uploadAvatar(who,input){
+  const file=input.files[0];if(!file)return;
+  const r=new FileReader();
+  r.onload=e=>{state[who+'AvatarImg']=e.target.result;renderAvatar(who+'-avatar-big',state[who+'Avatar'],state[who+'AvatarImg']);};
+  r.readAsDataURL(file);
+}
+
+// ===== KID =====
+function getTodayEarned(){
+  const today=getTodayStr();
+  return state.history.filter(h=>{
+    if(h.amount<=0)return false;
+    const d=new Date(h.rawDate||0);
+    return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()===today;
+  }).reduce((s,h)=>s+h.amount,0);
+}
+
+function refreshKid(){
+  document.getElementById('kid-name-header').textContent=state.kidName;
+  document.getElementById('kid-date-header').textContent=getTodayDisplay();
+  renderAvatar('kid-avatar-header',state.kidAvatar,state.kidAvatarImg);
+  document.getElementById('kid-balance').textContent='NT$ '+state.balance;
+  document.getElementById('kid-tagline').textContent=randMsg(BALANCE_TAGLINES);
+  document.getElementById('kid-today-earned').textContent='NT$ '+getTodayEarned();
+  // Deduct badge
+  const deductCount=(state.deductions||[]).filter(d=>d.status==='pending').length;
+  const badge=document.getElementById('kid-deduct-badge');
+  if(deductCount>0){badge.style.display='inline';badge.textContent=deductCount;}
+  else badge.style.display='none';
+  renderKidDaily();renderKidHistory();renderKidDeductions();
+}
+
+function renderKidDaily(){
+  const dailyTasks=getTodayDailyTasks();
+  const list=document.getElementById('kid-daily-list');
+  let total=0,done=0;
+
+  const makeCard=(icon,name,amount,desc,infoId,isDone,isPending,btnHtml,tag)=>{
+    total++;if(isDone)done++;
+    const ic=isDone?'#ccc':(isPending?'var(--amber)':'var(--accent)');
+    const wc=isDone?'done':(isPending?'pending':'');
+    const cc=isDone?'done-card':(isPending?'pending-card':'');
+    const nc=isDone?'done':'';
+    const rc=isDone?'done':(isPending?'pending':'');
+    return {isDone,html:`<div class="task-card ${cc}">
+      <div class="task-icon-wrap ${wc}">${svg(icon,ic)}</div>
+      <div class="task-info">
+        <div class="task-name ${nc}">${name}${tag||''}</div>
+        <div class="task-reward ${rc}">NT$ ${amount}</div>
+      </div>
+      ${desc?`<button class="info-btn" onclick="toggleInfo('${infoId}')">i</button>`:''}
+      ${btnHtml}
+    </div>${desc?`<div class="tooltip-box" id="${infoId}">${desc}</div>`:''}`};
+  };
+
+  // 1. Fixed daily tasks
+  const dailyCards=dailyTasks.map(t=>{
+    const ds=state.dailyState[t.id]||{};
+    const isPending=ds.status==='pending',isDone=ds.status==='done';
+    const subj=ds.subject?` (${ds.subject})`:'';
+    let btn=isDone?`<span class="btn-done-tag">已入帳</span>`:
+      isPending?`<span class="btn-pending-tag">審核中</span>`:
+      `<button class="btn-done" onclick="completeDailyTask('${t.id}')">完成</button>`;
+    return makeCard(t.icon,t.name+subj,t.amount,t.desc,`inf-${t.id}`,isDone,isPending,btn,'');
+  });
+
+  // 2. Mom's extra tasks → auto appear in kid list
+  const extraTag=`<span style="font-size:10px;color:var(--muted);background:var(--bg);border-radius:4px;padding:1px 5px;margin-left:4px;">額外</span>`;
+  const momExtraCards=(state.tasks||[]).map(t=>{
+    const pEntry=state.pendingTasks.find(p=>p.originalId===t.id&&!p.isKidSelf);
+    const isDone=!!(state.kidDoneExtra&&state.kidDoneExtra[t.id]);
+    const isPending=!!pEntry;
+    let btn=isDone?`<span class="btn-done-tag">已入帳</span>`:
+      isPending?`<span class="btn-pending-tag">審核中</span>`:
+      `<button class="btn-done" onclick="completeExtra(${t.id})">完成</button>`;
+    return makeCard(t.icon,t.name,t.amount,t.desc,`me-${t.id}`,isDone,isPending,btn,extraTag);
+  });
+
+  // 3. Kid self-added tasks
+  const selfTag=`<span style="font-size:10px;color:var(--muted);background:var(--bg);border-radius:4px;padding:1px 5px;margin-left:4px;">自訂</span>`;
+  const kidSelfCards=(state.kidExtraTasks||[]).map(t=>{
+    const isPending=!!state.pendingTasks.find(p=>p.originalId===t.kid_id);
+    const isDone=t.done;
+    let btn='';
+    if(isDone) btn=`<span class="btn-done-tag">已入帳</span>`;
+    else if(isPending) btn=`<span class="btn-pending-tag">審核中</span>`;
+    else btn=`<div style="display:flex;gap:6px;">
+      <button onclick="kidCancelSelf(${t.kid_id})" style="background:var(--bg);color:var(--muted);border:1.5px solid var(--border);border-radius:9px;padding:7px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">取消</button>
+      <button class="btn-done" onclick="completeKidExtra(${t.kid_id})">完成</button>
+    </div>`;
+    return makeCard('star',t.name,t.amount,t.desc,`ke-${t.kid_id}`,isDone,isPending,btn,selfTag);
+  });
+
+  const allCards=[...dailyCards,...momExtraCards,...kidSelfCards];
+  const active=allCards.filter(c=>!c.isDone);
+  const doneItems=allCards.filter(c=>c.isDone);
+  list.innerHTML=[...active,...doneItems].map(c=>c.html).join('');
+
+  const pct=total>0?Math.round(done/total*100):0;
+  document.getElementById('kid-progress-bar').style.width=pct+'%';
+  document.getElementById('kid-progress-text').textContent=done+'/'+total;
+}
+
+function openKidAddExtraModal(){
+  document.getElementById('kid-self-name').value='';
+  document.getElementById('kid-self-desc').value='';
+  document.getElementById('kid-self-amount').value='';
+  document.getElementById('modal-kid-add-task').classList.add('open');
+}
+
+function kidAddSelfTask(){
+  const name=document.getElementById('kid-self-name').value.trim();
+  const desc=document.getElementById('kid-self-desc').value.trim();
+  const amount=parseInt(document.getElementById('kid-self-amount').value)||0;
+  if(!name){showToast('請輸入任務名稱');return;}
+  if(!state.kidExtraTasks) state.kidExtraTasks=[];
+  state.kidExtraTasks.push({name,desc,amount,kid_id:state.nextId++,done:false,addedDate:getTodayStr(),icon:'star'});
+  closeModal('modal-kid-add-task');
+  showToast('任務已加入！點「完成」再送審 🐾');
+  saveState();renderKidDaily();
+}
+
+function completeKidExtra(kidId){
+  if(!state.kidExtraTasks)return;
+  const task=state.kidExtraTasks.find(t=>t.kid_id===kidId);if(!task)return;
+  if(state.pendingTasks.find(p=>p.originalId===kidId)){showToast('已送出審核中！');return;}
+  state.pendingTasks.push({...task,pendingId:state.nextId++,originalId:kidId,icon:'star',isKidSelf:true});
+  task.done=true;
+  showToast('任務完成，貓BOSS審核中… 🐾');
+  saveState();renderKidDaily();
+}
+
+function renderKidExtra(){
+  const list=document.getElementById('kid-extra-list');
+  const all=[...state.tasks,...state.pendingTasks.filter(p=>p.isKidAdded)];
+  if(!state.tasks.length&&!state.pendingTasks.filter(p=>p.isKidAdded).length){
+    list.innerHTML=`<div class="empty-state"><div class="empty-icon">${svg('star','#ccc')}</div><div class="empty-text">快來摸魚（其實是學習）</div></div>`;return;
+  }
+  list.innerHTML=state.tasks.map(t=>{
+    const isPending=state.pendingTasks.find(p=>p.originalId===t.id&&!p.isKidAdded);
+    let btn=isPending?`<span class="btn-pending-tag">任務中</span>`:`<button class="btn-done" onclick="completeExtra(${t.id})">完成</button>`;
+    return `<div class="task-card ${isPending?'pending-card':''}">
+      <div class="task-icon-wrap ${isPending?'pending':''}">${svg(t.icon,isPending?'var(--amber)':'var(--accent)')}</div>
+      <div class="task-info"><div class="task-name">${t.name}</div><div class="task-reward ${isPending?'pending':''}">NT$ ${t.amount}</div></div>
+      ${t.desc?`<button class="info-btn" onclick="toggleInfo('xi-${t.id}')">i</button>`:''}
+      ${btn}
+    </div>${t.desc?`<div class="tooltip-box" id="xi-${t.id}">${t.desc}</div>`:''}`;
+  }).join('')+state.pendingTasks.filter(p=>p.isKidAdded).map(t=>`
+    <div class="task-card pending-card">
+      <div class="task-icon-wrap pending">${svg('star','var(--amber)')}</div>
+      <div class="task-info"><div class="task-name">${t.name}</div><div class="task-reward pending">NT$ ${t.amount}</div></div>
+      <button onclick="kidCancelTask(${t.pendingId})" style="background:var(--bg);color:var(--muted);border:1.5px solid var(--border);border-radius:10px;padding:7px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">取消</button>
+    </div>`).join('');
+}
+
+function renderKidHistory(){
+  const list=document.getElementById('kid-history-list');
+  if(!state.history.length){list.innerHTML=`<div class="empty-state"><div class="empty-icon">${svg('coin','#ccc')}</div><div class="empty-text">摸魚紀錄空空的<br>快去完成任務！</div></div>`;return;}
+  // Group by week
+  const groups={};
+  [...state.history].reverse().forEach(h=>{
+    const d=new Date(h.rawDate||Date.now());
+    const yr=d.getFullYear(),mo=d.getMonth()+1,wk=getWeekNum(d);
+    const key=`${yr}-W${wk}`;
+    const label=`${yr}年 第${wk}週 (${mo}月)`;
+    if(!groups[key])groups[key]={label,items:[]};
+    groups[key].items.push(h);
+  });
+  list.innerHTML=Object.entries(groups).map(([key,g],gi)=>`
+    <div class="history-group">
+      <div class="history-group-hdr" onclick="toggleGroup('hg-${gi}','arr-${gi}')">
+        <div class="history-group-label">📅 ${g.label}</div>
+        <div style="flex:1;"></div>
+        <div style="font-size:11px;color:var(--muted);margin-right:4px;">共${g.items.length}筆</div>
+        <div class="history-group-arrow open" id="arr-${gi}">▶</div>
+      </div>
+      <div class="history-group-body" id="hg-${gi}">
+        ${g.items.map(h=>`
+          <div class="history-item">
+            <div class="history-icon-wrap">${svg(h.icon||'star',h.amount>0?'var(--green)':'var(--red)')}</div>
+            <div style="flex:1;"><div class="history-name">${h.name}</div><div class="history-date">${h.date}</div></div>
+            <div class="history-amount ${h.amount>0?'amount-plus':'amount-minus'}">${h.amount>0?'+':'-'} NT$${Math.abs(h.amount)}</div>
+          </div>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
+function getWeekNum(d){const start=new Date(d.getFullYear(),0,1);return Math.ceil(((d-start)/86400000+start.getDay()+1)/7);}
+function toggleGroup(bodyId,arrId){
+  const b=document.getElementById(bodyId),a=document.getElementById(arrId);
+  if(!b)return;
+  const hidden=b.style.display==='none';
+  b.style.display=hidden?'block':'none';
+  a.classList.toggle('open',hidden);
+}
+function toggleInfo(id){const el=document.getElementById(id);if(el)el.classList.toggle('show');}
+
+function completeDailyTask(taskId){
+  const tasks=getTodayDailyTasks();
+  const task=tasks.find(t=>t.id===taskId);if(!task)return;
+  // Sleep task: show today summary first
+  const isSleep=taskId==='wd_sleep'||taskId==='we_sleep';
+  if(isSleep){
+    const todayEarned=getTodayEarned();
+    const doneTasks=tasks.filter(t=>state.dailyState[t.id]&&state.dailyState[t.id].status==='done').length;
+    document.getElementById('sleep-today-earned').textContent='NT$ '+todayEarned;
+    document.getElementById('sleep-tasks-done').textContent='完成 '+doneTasks+' 項任務';
+    document.getElementById('sleep-total-balance').textContent='NT$ '+state.balance;
+    document.getElementById('modal-sleep-summary').classList.add('open');
+    return;
+  }
+  if(task.isExam){pendingSubjectTaskId=taskId;selectedSubject='';document.querySelectorAll('#subject-chips .subject-chip').forEach(c=>c.classList.remove('selected'));document.getElementById('modal-subject').classList.add('open');}
+  else{state.dailyState[taskId]={status:'pending'};showToast('任務完成，貓BOSS審核中… 🐾');saveState();refreshKid();}
+}
+
+let sleepTaskId='';
+function confirmSleepTask(){
+  const tasks=getTodayDailyTasks();
+  const sleepTask=tasks.find(t=>t.id==='wd_sleep'||t.id==='we_sleep');
+  if(!sleepTask)return;
+  state.dailyState[sleepTask.id]={status:'pending'};
+  closeModal('modal-sleep-summary');
+  showToast('晚安！今天也很棒 🌙 貓BOSS審核中…');
+  saveState();refreshKid();
+}
+function toggleSubject(el,subj){document.querySelectorAll('.subject-chip').forEach(c=>c.classList.remove('selected'));if(selectedSubject===subj){selectedSubject='';}else{selectedSubject=subj;el.classList.add('selected');}}
+function confirmSubject(withSubj){
+  if(!pendingSubjectTaskId)return;
+  const ds={status:'pending'};
+  if(withSubj&&selectedSubject)ds.subject=selectedSubject;
+  state.dailyState[pendingSubjectTaskId]=ds;
+  closeModal('modal-subject');showToast('專注中…金幣準備進帳 🪙');
+  pendingSubjectTaskId=null;selectedSubject='';saveState();refreshKid();
+}
+function completeExtra(id){
+  const task=state.tasks.find(t=>t.id===id);if(!task)return;
+  if(state.pendingTasks.find(p=>p.originalId===id)){showToast('貓BOSS已收到，審核中！');return;}
+  state.pendingTasks.push({...task,pendingId:state.nextId++,originalId:id});
+  showToast(randMsg(COMPLETE_MSGS));saveState();refreshKid();
+}
+function openKidAddTaskModal(){
+  document.getElementById('kid-task-name-input').value='';
+  document.getElementById('kid-task-desc-input').value='';
+  document.getElementById('kid-task-amount-input').value='';
+  document.getElementById('modal-kid-add-task').classList.add('open');
+}
+function kidAddTask(){
+  const name=document.getElementById('kid-task-name-input').value.trim();
+  const amount=parseInt(document.getElementById('kid-task-amount-input').value)||0;
+  const desc=document.getElementById('kid-task-desc-input').value.trim();
+  if(!name){showToast('請輸入任務名稱');return;}
+  state.pendingTasks.push({pendingId:state.nextId++,id:state.nextId++,name,icon:'star',amount,desc,isKidAdded:true,originalId:-1});
+  closeModal('modal-kid-add-task');showToast('已送出！貓貓正在偷偷變強 🐾');saveState();refreshKid();
+}
+
+let kidExamSelectedSubject='';
+function openKidAddExamModal(){
+  kidExamSelectedSubject='';
+  document.querySelectorAll('#kid-exam-subject-chips .subject-chip').forEach(c=>c.classList.remove('selected'));
+  document.getElementById('kid-exam-amount-input').value='20';
+  document.getElementById('modal-kid-add-exam').classList.add('open');
+}
+function toggleKidExamSubject(el,subj){
+  document.querySelectorAll('#kid-exam-subject-chips .subject-chip').forEach(c=>c.classList.remove('selected'));
+  if(kidExamSelectedSubject===subj){kidExamSelectedSubject='';}else{kidExamSelectedSubject=subj;el.classList.add('selected');}
+}
+function kidAddExam(){
+  const amount=parseInt(document.getElementById('kid-exam-amount-input').value)||20;
+  const subj=kidExamSelectedSubject;
+  const name='評量'+(subj?' ('+subj+')':'');
+  if(!state.kidExtraTasks) state.kidExtraTasks=[];
+  state.kidExtraTasks.push({
+    name, icon:'exam', amount,
+    desc:subj?'科目：'+subj:'',
+    subject:subj||'',
+    kid_id:state.nextId++,
+    done:false,
+    addedDate:getTodayStr(),
+    isExam:true
+  });
+  closeModal('modal-kid-add-exam');
+  showToast('評量任務已加入清單！點「完成」再送審 🐾');
+  saveState();renderKidDaily();
+}
+
+function kidCancelSelf(kidId){
+  state.kidExtraTasks=(state.kidExtraTasks||[]).filter(t=>t.kid_id!==kidId);
+  showToast('任務已取消');
+  saveState();renderKidDaily();
+}
+
+function kidCancelTask(pendingId){
+  state.pendingTasks=state.pendingTasks.filter(t=>t.pendingId!==pendingId);
+  showToast('任務已取消');
+  saveState(); refreshKid();
+}
+
+function switchKidTab(tab){
+  ['daily','deduct','history'].forEach(t=>{
+    document.getElementById('kid-tab-'+t).classList.toggle('active',t===tab);
+    document.getElementById('kid-'+t+'-panel').style.display=t===tab?'block':'none';
+  });
+}
+function switchKidNav(nav){
+  ['main','profile'].forEach(n=>document.getElementById('kid-nav-'+n).classList.remove('active'));
+  if(nav==='profile'){
+    document.getElementById('kid-nav-profile').classList.add('active');
+    document.getElementById('kid-name-input').value=state.kidName;
+    renderAvatar('kid-avatar-big',state.kidAvatar,state.kidAvatarImg);
+    renderAvatarPicker('kid-avatar-picker',state.kidAvatar,'kid');
+    showFamilyCode();
+    showScreen('screen-kid-profile');
+  } else {
+    document.getElementById('kid-nav-main').classList.add('active');
+    showScreen('screen-kid');refreshKid();
+  }
+}
+function saveKidProfile(){
+  const n=document.getElementById('kid-name-input').value.trim();if(n)state.kidName=n;
+  saveState();showToast('設定已儲存 ✓');switchKidNav('main');
+}
+
+// ===== MOM =====
+function refreshMom(){
+  document.getElementById('mom-name-header').textContent=state.momName;
+  renderAvatar('mom-avatar-header',state.momAvatar,state.momAvatarImg);
+  const pc=countPendingAll();
+  document.getElementById('mom-balance-val').textContent='NT$'+state.balance;
+  document.getElementById('mom-today-val').textContent='NT$'+getTodayEarned();
+  document.getElementById('mom-pending-val').textContent=pc;
+  document.getElementById('review-badge').textContent=pc>0?' ('+pc+')':'';
+  renderMomReview();renderMomDailyConfig();renderMomTasks();renderMomHistory();
+}
+function countPendingAll(){
+  return Object.values(state.dailyState).filter(d=>d.status==='pending').length+state.pendingTasks.length+state.withdrawRequests.length;
+}
+function renderMomTasks(){
+  const list=document.getElementById('mom-task-list');
+  const section=document.getElementById('mom-task-list-section');
+  if(!state.tasks.length){
+    section.style.display='none';
+    return;
+  }
+  section.style.display='block';
+  list.innerHTML=state.tasks.map(t=>`
+    <div class="task-card">
+      <div class="task-icon-wrap">${svg(t.icon,'var(--accent)')}</div>
+      <div class="task-info"><div class="task-name">${t.name}</div><div class="task-reward">NT$ ${t.amount}</div>${t.desc?`<div style="font-size:11px;color:var(--muted);margin-top:2px;">${t.desc}</div>`:''}</div>
+      <button class="btn-remove" onclick="removeTask(${t.id})">移除</button>
+    </div>`).join('');
+}
+function renderMomDailyConfig(){
+  renderDCList('mom-weekday-list',state.dailyConfig.weekday,'weekday');
+  renderDCList('mom-weekend-list',state.dailyConfig.weekend,'weekend');
+}
+function renderDCList(elId,tasks,type){
+  document.getElementById(elId).innerHTML=tasks.map(t=>`
+    <div class="daily-edit-item">
+      <div class="task-icon-wrap">${svg(t.icon,'var(--accent)')}</div>
+      <div class="task-info"><div class="task-name">${t.name}</div><div class="task-reward">NT$ ${t.amount}</div>${t.desc?`<div style="font-size:11px;color:var(--muted);margin-top:2px;">${t.desc}</div>`:''}</div>
+      <button class="btn-remove" onclick="openEditDaily('${t.id}','${type}')">編輯</button>
+    </div>`).join('');
+}
+function openEditDaily(taskId,type){
+  const list=type==='weekday'?state.dailyConfig.weekday:state.dailyConfig.weekend;
+  const task=list.find(t=>t.id===taskId);if(!task)return;
+  editingDailyId=taskId;editingDailyType=type;
+  document.getElementById('edit-daily-title').textContent='編輯：'+task.name;
+  document.getElementById('edit-daily-desc').value=task.desc||'';
+  document.getElementById('edit-daily-amount').value=task.amount;
+  document.getElementById('modal-edit-daily').classList.add('open');
+}
+function saveDailyEdit(){
+  const list=editingDailyType==='weekday'?state.dailyConfig.weekday:state.dailyConfig.weekend;
+  const task=list.find(t=>t.id===editingDailyId);if(!task)return;
+  const amount=parseInt(document.getElementById('edit-daily-amount').value);
+  if(amount>=0)task.amount=amount;
+  task.desc=document.getElementById('edit-daily-desc').value.trim();
+  closeModal('modal-edit-daily');showToast('已儲存 ✓');saveState();renderMomDailyConfig();
+}
+function renderMomReview(){
+  const rev=document.getElementById('mom-review-list');
+  const wd=document.getElementById('mom-withdraw-list');
+  const dailyTasks=getTodayDailyTasks();
+  const dailyP=dailyTasks.filter(t=>state.dailyState[t.id]&&state.dailyState[t.id].status==='pending');
+  const extraP=state.pendingTasks;
+  const allP=[...dailyP.map(t=>({...t,isDaily:true})),...extraP.map(t=>({...t,isDaily:false}))];
+  if(!allP.length){rev.innerHTML=`<div style="font-size:13px;color:var(--muted);padding:4px 0 12px;">沒有待審核任務，貓貓正在偷偷摸魚 ✓</div>`;}
+  else rev.innerHTML=allP.map(t=>{
+    const ds=t.isDaily?(state.dailyState[t.id]||{}):{};
+    const subj=ds.subject?`<div style="font-size:11px;color:var(--green);margin-top:2px;">📚 ${ds.subject}</div>`:'';
+    const pid=t.isDaily?`'${t.id}'`:t.pendingId;
+    const isKidAdded=!!t.isKidAdded;
+    const isKidSelf=!!t.isKidSelf;
+    const extraBadge=(isKidAdded||isKidSelf)?`<span style="font-size:11px;color:var(--muted);background:var(--bg);border-radius:4px;padding:1px 5px;margin-left:4px;font-weight:700;">額外</span>`:'';
+    const amountEdit=(isKidAdded||isKidSelf)?`
+      <div style="margin-bottom:8px;display:flex;align-items:center;gap:8px;">
+        <span style="font-size:12px;color:var(--muted);font-weight:600;">調整金額 NT$</span>
+        <input type="number" value="${t.amount}" min="0" id="amt-${t.pendingId}"
+          style="width:80px;padding:5px 8px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-weight:700;font-family:inherit;color:var(--text);background:var(--card);"
+          onchange="updateKidTaskAmount(${t.pendingId},this.value)"/>
+      </div>`:'';
+    return `<div class="review-card">
+      <div class="review-row">
+        <div class="task-icon-wrap pending">${svg(t.icon||'star','var(--amber)')}</div>
+        <div class="task-info"><div class="task-name">${t.name}${extraBadge}</div><div class="task-reward pending">NT$ ${t.amount}</div>${subj}</div>
+        ${t.desc?`<button class="info-btn" onclick="toggleInfo('rev-${t.pendingId||t.id}')">i</button>`:''}
+        <span style="font-size:10px;color:var(--amber);font-weight:700;">${(isKidAdded||isKidSelf)?'小孩新增':'審核中'}</span>
+      </div>
+      ${t.desc?`<div class="tooltip-box" id="rev-${t.pendingId||t.id}">${t.desc}</div>`:''}
+      ${amountEdit}
+      <div class="review-actions">
+        <button class="btn-approve" onclick="approvePending(${pid},${t.isDaily})">✓ 確認完成</button>
+        <button class="btn-reject" onclick="rejectPending(${pid},${t.isDaily})">✕ 退回</button>
+      </div>
+    </div>`;
+  }).join('');
+  renderMomDeductions();
+
+  // Incomplete today tasks (daily + kid self extra not yet done/pending)
+  const incEl=document.getElementById('mom-incomplete-list');
+  const allDaily=getTodayDailyTasks();
+  const incompleteDaily=allDaily.filter(t=>{
+    const ds=state.dailyState[t.id]||{};
+    return ds.status!=='pending'&&ds.status!=='done';
+  });
+  const incompleteKidSelf=(state.kidExtraTasks||[]).filter(t=>{
+    const isPending=state.pendingTasks.find(p=>p.originalId===t.kid_id);
+    return !t.done&&!isPending;
+  });
+  const incomplete=[...incompleteDaily,...incompleteKidSelf];
+  if(!incomplete.length){
+    incEl.innerHTML=`<div style="font-size:13px;color:var(--muted);padding:4px 0;">全部完成了！貓貓相信你可以完成任務 🐾</div>`;
+  } else {
+    const extraBadgeMom=`<span style="font-size:10px;font-size:10px;color:var(--muted);background:var(--bg);border-radius:4px;padding:1px 5px;margin-left:4px;">額外</span>`;
+    incEl.innerHTML=incomplete.map(t=>{
+      const isExtra=!!t.kid_id;
+      return `<div class="task-card">
+        <div class="task-icon-wrap">${svg(t.icon||'star','var(--muted)')}</div>
+        <div class="task-info">
+          <div class="task-name" style="color:var(--muted);">${t.name}${isExtra?extraBadgeMom:''}</div>
+          <div class="task-reward" style="color:var(--muted);">NT$ ${t.amount}</div>
+        </div>
+        <span style="font-size:11px;color:var(--muted);font-weight:700;">未完成</span>
+      </div>`;
+    }).join('');
+  }
+
+  if(!state.withdrawRequests.length)wd.innerHTML=`<div style="font-size:13px;color:var(--muted);padding:4px 0;">沒有提領申請 ✓</div>`;
+  else wd.innerHTML=state.withdrawRequests.map(w=>`
+    <div class="withdraw-card">
+      <div style="font-size:10px;font-weight:700;letter-spacing:0;color:var(--amber);text-transform:uppercase;">兌換申請</div>
+      <div style="font-size:26px;font-weight:900;color:var(--text);margin:3px 0;">NT$ ${w.amount}</div>
+      <div style="font-size:11px;color:var(--muted);">${w.date}</div>
+      <div class="review-actions" style="margin-top:10px;">
+        <button class="btn-approve" onclick="approveWithdraw(${w.id})">✓ 已給現金</button>
+        <button class="btn-reject" onclick="rejectWithdraw(${w.id})">✕ 取消</button>
+      </div>
+    </div>`).join('');
+}
+function renderMomHistory(){
+  const list=document.getElementById('mom-history-list');
+  if(!state.history.length){list.innerHTML=`<div class="empty-state"><div class="empty-icon">${svg('coin','#ccc')}</div><div class="empty-text">還沒有紀錄</div></div>`;return;}
+  const groups={};
+  [...state.history].reverse().forEach(h=>{
+    const d=new Date(h.rawDate||Date.now());
+    const yr=d.getFullYear(),mo=d.getMonth()+1,wk=getWeekNum(d);
+    const key=`${yr}-W${wk}`;const label=`${yr}年 第${wk}週 (${mo}月)`;
+    if(!groups[key])groups[key]={label,items:[]};groups[key].items.push(h);
+  });
+  list.innerHTML=Object.entries(groups).map(([key,g],gi)=>`
+    <div class="history-group">
+      <div class="history-group-hdr" onclick="toggleGroup('mhg-${gi}','marr-${gi}')">
+        <div class="history-group-label">📅 ${g.label}</div>
+        <div style="flex:1;"></div>
+        <div style="font-size:11px;color:var(--muted);margin-right:4px;">共${g.items.length}筆</div>
+        <div class="history-group-arrow open" id="marr-${gi}">▶</div>
+      </div>
+      <div class="history-group-body" id="mhg-${gi}">
+        ${g.items.map(h=>`
+          <div class="history-item">
+            <div class="history-icon-wrap">${svg(h.icon||'star',h.amount>0?'var(--green)':'var(--red)')}</div>
+            <div style="flex:1;"><div class="history-name">${h.name}</div><div class="history-date">${h.date}</div></div>
+            <div class="history-amount ${h.amount>0?'amount-plus':'amount-minus'}">${h.amount>0?'+':'-'} NT$${Math.abs(h.amount)}</div>
+          </div>`).join('')}
+      </div>
+    </div>`).join('');
+}
+function approvePending(idOrDailyId,isDaily){
+  if(isDaily){
+    const tasks=getTodayDailyTasks();
+    const task=tasks.find(t=>t.id===idOrDailyId);if(!task)return;
+    state.balance+=task.amount;
+    const ds=state.dailyState[idOrDailyId]||{};
+    const subj=ds.subject?` (${ds.subject})`:'';
+    state.history.push({icon:task.icon,name:'完成：'+task.name+subj,amount:task.amount,date:getDateTimeStr(),rawDate:Date.now()});
+    state.dailyState[idOrDailyId]={...ds,status:'done'};
+  } else {
+    const task=state.pendingTasks.find(t=>t.pendingId===idOrDailyId);if(!task)return;
+    state.balance+=task.amount;
+    state.history.push({icon:task.icon||'star',name:'完成：'+task.name,amount:task.amount,date:getDateTimeStr(),rawDate:Date.now()});
+    state.pendingTasks=state.pendingTasks.filter(t=>t.pendingId!==idOrDailyId);
+  }
+  showToast(randMsg(APPROVE_MSGS,state.balance));saveState();refreshMom();
+}
+function updateKidTaskAmount(pendingId,val){
+  const task=state.pendingTasks.find(t=>t.pendingId===pendingId);
+  if(!task)return;
+  const n=parseInt(val);
+  if(n>=0)task.amount=n;
+  saveState();
+}
+
+function rejectPending(idOrDailyId,isDaily){
+  if(isDaily)delete state.dailyState[idOrDailyId];
+  else state.pendingTasks=state.pendingTasks.filter(t=>t.pendingId!==idOrDailyId);
+  showToast('任務退回，再摸一下就有獎勵了！');saveState();refreshMom();
+}
+function approveWithdraw(wid){
+  const req=state.withdrawRequests.find(w=>w.id===wid);if(!req)return;
+  state.balance-=req.amount;
+  state.history.push({icon:'coin',name:'兌換獎勵',amount:-req.amount,date:getDateTimeStr(),rawDate:Date.now()});
+  state.withdrawRequests=state.withdrawRequests.filter(w=>w.id!==wid);
+  showToast('已入帳！用努力換想要的東西 🪙');saveState();refreshMom();
+}
+function rejectWithdraw(wid){
+  state.withdrawRequests=state.withdrawRequests.filter(w=>w.id!==wid);
+  showToast('兌換申請已取消');saveState();refreshMom();
+}
+function removeTask(id){
+  if(!confirm('確定要移除這個任務嗎？'))return;
+  state.tasks=state.tasks.filter(t=>t.id!==id);showToast('任務已移除');saveState();refreshMom();
+}
+function switchMomTab(tab){
+  ['review','tasks','deduct','history'].forEach(t=>{
+    document.getElementById('mom-tab-'+t).classList.toggle('active',t===tab);
+    document.getElementById('mom-'+t+'-panel').style.display=t===tab?'block':'none';
+  });
+}
+function switchMomNav(nav){
+  ['main','profile'].forEach(n=>document.getElementById('mom-nav-'+n).classList.remove('active'));
+  if(nav==='profile'){
+    document.getElementById('mom-nav-profile').classList.add('active');
+    document.getElementById('mom-name-input').value=state.momName;
+    document.getElementById('mom-new-pin').value='';
+    renderAvatar('mom-avatar-big',state.momAvatar,state.momAvatarImg);
+    renderAvatarPicker('mom-avatar-picker',state.momAvatar,'mom');
+    showFamilyCode();
+    showScreen('screen-mom-profile');
+  } else {
+    document.getElementById('mom-nav-main').classList.add('active');
+    showScreen('screen-mom');refreshMom();
+  }
+}
+function saveMomProfile(){
+  const n=document.getElementById('mom-name-input').value.trim();if(n)state.momName=n;
+  const np=document.getElementById('mom-new-pin').value.trim();
+  if(np){if(np.length===4&&!isNaN(np))state.pin=np;else{showToast('密碼需為4位數字');return;}}
+  saveState();showToast('設定已儲存 ✓');switchMomNav('main');
+}
+
+// ===== TASK MODALS =====
+function openAddTaskModal(){
+  document.getElementById('task-name-input').value='';
+  document.getElementById('task-desc-input').value='';
+  document.getElementById('task-amount-input').value='';
+  state.selectedTaskIcon=ICON_KEYS[0];
+  const picker=document.getElementById('task-icon-picker');
+  picker.innerHTML=ICON_KEYS.map((k,i)=>`<div class="icon-opt ${i===0?'selected':''}" onclick="selIcon('${k}',this,'task-icon-picker')">${svg(k,'var(--muted)')}</div>`).join('');
+  document.getElementById('modal-add-task').classList.add('open');
+}
+function selIcon(k,el,pickerId){
+  state.selectedTaskIcon=k;
+  document.querySelectorAll('#'+pickerId+' .icon-opt').forEach(e=>e.classList.remove('selected'));
+  el.classList.add('selected');
+}
+function addTask(){
+  const name=document.getElementById('task-name-input').value.trim();
+  const amount=parseInt(document.getElementById('task-amount-input').value);
+  const desc=document.getElementById('task-desc-input').value.trim();
+  if(!name){showToast('請輸入任務名稱');return;}
+  if(isNaN(amount)||amount<0){showToast('請輸入有效金額');return;}
+  state.tasks.push({id:state.nextId++,name,icon:state.selectedTaskIcon,amount,desc});
+  closeModal('modal-add-task');showToast('任務新增成功 ✓');saveState();refreshMom();
+}
+function openWithdrawModal(){
+  document.getElementById('withdraw-available').textContent='NT$ '+state.balance;
+  document.getElementById('withdraw-amount-input').value='';
+  document.getElementById('modal-withdraw').classList.add('open');
+}
+function submitWithdraw(){
+  const amount=parseInt(document.getElementById('withdraw-amount-input').value);
+  if(isNaN(amount)||amount<0){showToast('請輸入有效金額');return;}
+  if(amount>state.balance){showToast('金幣不夠喔！再摸一下就有獎勵了');return;}
+  state.withdrawRequests.push({id:state.nextId++,amount,date:getDateTimeStr()});
+  closeModal('modal-withdraw');showToast('兌換申請送出！貓貓相信你可以完成任務 🐾');saveState();refreshKid();
+}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+
+// ===== AVATAR PICKER =====
+function renderAvatarPicker(containerId,current,prefix){
+  const c=document.getElementById(containerId);
+  c.innerHTML=AVATARS_DEFAULT.map(a=>`<div class="avatar-opt ${a===current?'selected':''}" onclick="selectAvatar('${a}','${prefix}',this)"><span>${a}</span></div>`).join('');
+}
+function selectAvatar(av,prefix,el){
+  document.querySelectorAll('#'+prefix+'-avatar-picker .avatar-opt').forEach(e=>e.classList.remove('selected'));
+  el.classList.add('selected');state[prefix+'Avatar']=av;state[prefix+'AvatarImg']=null;renderAvatar(prefix+'-avatar-big',av,null);
+}
+
+function openDeductModal(){
+  document.getElementById('deduct-name-input').value='';
+  document.getElementById('deduct-desc-input').value='';
+  document.getElementById('deduct-amount-input').value='';
+  document.getElementById('modal-deduct').classList.add('open');
+}
+
+function submitDeduction(){
+  const name=document.getElementById('deduct-name-input').value.trim();
+  const desc=document.getElementById('deduct-desc-input').value.trim();
+  const amount=parseInt(document.getElementById('deduct-amount-input').value);
+  if(!name){showToast('請輸入扣款名稱');return;}
+  if(isNaN(amount)||amount<0){showToast('請輸入有效金額');return;}
+  if(!state.deductions) state.deductions=[];
+  state.deductions.push({id:state.nextId++,name,desc,amount,status:'pending',date:getDateTimeStr()});
+  closeModal('modal-deduct');
+  showToast('扣款申請已送出，等待小孩確認 ✓');
+  saveState(); refreshMom();
+}
+
+function kidConfirmDeduction(id){
+  if(!state.deductions) return;
+  const d=state.deductions.find(x=>x.id===id); if(!d) return;
+  state.balance-=d.amount;
+  state.history.push({icon:'coin',name:'扣款：'+d.name,amount:-d.amount,date:getDateTimeStr(),rawDate:Date.now()});
+  state.deductions=state.deductions.filter(x=>x.id!==id);
+  showToast('已確認扣款 NT$'+d.amount);
+  saveState(); refreshKid();
+}
+
+function kidRejectDeduction(id){
+  state.deductions=state.deductions.filter(x=>x.id!==id);
+  showToast('扣款已駁回');
+  saveState(); refreshKid();
+}
+
+function renderKidDeductions(){
+  const pending=(state.deductions||[]).filter(d=>d.status==='pending');
+  const deductCount=pending.length;
+  const badge=document.getElementById('kid-deduct-badge');
+  if(badge){if(deductCount>0){badge.style.display='inline';badge.textContent=deductCount;}else badge.style.display='none';}
+  const el=document.getElementById('kid-deduction-list');
+  if(!el)return;
+  if(!pending.length){
+    el.innerHTML=`<div style="font-size:13px;color:var(--muted);padding:12px 0;text-align:center;">目前沒有扣款申請 ✓</div>`;
+    return;
+  }
+  el.innerHTML=pending.map(d=>`
+    <div class="task-card" style="border-color:#f0c0c0;background:#fff8f8;flex-direction:column;align-items:flex-start;gap:10px;">
+      <div style="display:flex;align-items:center;gap:12px;width:100%;">
+        <div class="task-icon-wrap" style="background:var(--red-light);">${svg('coin','var(--red)')}</div>
+        <div class="task-info">
+          <div class="task-name">${d.name}</div>
+          <div class="task-reward" style="color:var(--red);">- NT$ ${d.amount}</div>
+          ${d.desc?`<div style="font-size:11px;color:var(--muted);margin-top:2px;">${d.desc}</div>`:''}
+          <div style="font-size:11px;color:var(--muted);">${d.date}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;width:100%;">
+        <button onclick="kidRejectDeduction(${d.id})" style="flex:1;background:var(--bg);color:var(--muted);border:1.5px solid var(--border);border-radius:10px;padding:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">駁回</button>
+        <button onclick="kidConfirmDeduction(${d.id})" style="flex:1;background:var(--red);color:white;border:none;border-radius:10px;padding:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">確認扣款</button>
+      </div>
+    </div>`).join('');
+}
+
+function renderMomDeductions(){
+  const el=document.getElementById('mom-deduction-list');
+  if(!state.deductions||!state.deductions.length){
+    el.innerHTML=`<div style="font-size:13px;color:var(--muted);padding:4px 0;">沒有待確認扣款 ✓</div>`; return;
+  }
+  const pending=state.deductions.filter(d=>d.status==='pending');
+  if(!pending.length){el.innerHTML=`<div style="font-size:13px;color:var(--muted);padding:4px 0;">沒有待確認扣款 ✓</div>`;return;}
+  el.innerHTML=pending.map(d=>`
+    <div class="task-card" style="border-color:#f0c0c0;background:#fff8f8;">
+      <div class="task-icon-wrap" style="background:var(--red-light);">${svg('coin','var(--red)')}</div>
+      <div class="task-info">
+        <div class="task-name">${d.name}</div>
+        <div class="task-reward" style="color:var(--red);">- NT$ ${d.amount}</div>
+        ${d.desc?`<div style="font-size:11px;color:var(--muted);margin-top:2px;">${d.desc}</div>`:''}
+        <div style="font-size:11px;color:var(--muted);">${d.date} · 等待小孩確認</div>
+      </div>
+      <button onclick="cancelDeduction(${d.id})" style="background:var(--bg);color:var(--muted);border:none;border-radius:8px;padding:7px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">取消</button>
+    </div>`).join('');
+}
+
+function cancelDeduction(id){
+  state.deductions=state.deductions.filter(x=>x.id!==id);
+  showToast('扣款已取消');
+  saveState(); refreshMom();
+}
+
+// ===== FAMILY CODE =====
+function showFamilyCode(){
+  if(!familyId) return;
+  // Show short code — last 6 chars of familyId
+  const code = familyId.slice(-6).toUpperCase();
+  const el = document.getElementById('mom-family-code');
+  if(el) el.textContent = code;
+  const kidEl = document.getElementById('kid-family-id');
+  if(kidEl) kidEl.textContent = code;
+}
+
+function copyFamilyCode(){
+  const code = familyId ? familyId.slice(-6).toUpperCase() : '';
+  if(navigator.clipboard) navigator.clipboard.writeText(code);
+  showToast('邀請碼已複製：' + code + ' 🐾');
+}
+
+async function joinFamily(){
+  const input = document.getElementById('family-code-input').value.trim().toUpperCase();
+  if(input.length !== 6){ showToast('請輸入6位邀請碼'); return; }
+  showToast('搜尋中...');
+  // Find family where last 6 of uid matches
+  try {
+    const snap = await db.collection('families').get();
+    let found = null;
+    snap.forEach(doc => {
+      if(doc.id.slice(-6).toUpperCase() === input) found = doc.id;
+    });
+    if(!found){ showToast('找不到這個邀請碼，請確認'); return; }
+    // Update this user's familyId
+    await db.collection('users').doc(currentUser.uid).update({ familyId: found });
+    familyId = found;
+    startSync();
+    showToast('成功加入家庭！資料即時同步中 🎉');
+    document.getElementById('family-code-input').value = '';
+    showFamilyCode();
+  } catch(e) {
+    showToast('加入失敗，請再試一次');
+  }
+}
+
+function signOut(){
+  auth.signOut();
+  showToast('已登出');
+}
+
+// ===== TOAST =====
+function showToast(msg){
+  const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2800);
+}
+document.querySelectorAll('.modal-overlay').forEach(o=>{
+  o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');});
+});
+
+loadState();checkDailyReset();
+
+// ===== FIREBASE =====
+const firebaseConfig = {
+  apiKey: "AIzaSyC1AeWmvFZCnB7zmSRD7jLzdKFazV-JFSU",
+  authDomain: "maomao-task.firebaseapp.com",
+  projectId: "maomao-task",
+  storageBucket: "maomao-task.firebasestorage.app",
+  messagingSenderId: "518897920615",
+  appId: "1:518897920615:web:d63dc64d2482d097ac42c2"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const auth = firebase.auth();
+
+let currentUser = null;
+let familyId = null;
+let unsubscribe = null;
+
+function loginWithGoogle(){
+  const provider = new firebase.auth.GoogleAuthProvider();
+  // Try popup first, fallback to redirect for iOS
+  auth.signInWithPopup(provider).catch(err => {
+    if(err.code === 'auth/popup-blocked' || err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request'){
+      auth.signInWithRedirect(provider);
+    } else {
+      showToast('登入失敗，請再試一次');
+    }
+  });
+}
+
+// Handle redirect result on page load
+auth.getRedirectResult().catch(e => { console.log('redirect error', e); });
+
+auth.onAuthStateChanged(async user => {
+  if(user){
+    currentUser = user;
+    try {
+      const userDoc = await db.collection('users').doc(user.uid).get();
+      if(userDoc.exists){
+        familyId = userDoc.data().familyId;
+      } else {
+        familyId = user.uid;
+        await db.collection('users').doc(user.uid).set({familyId, email: user.email||'', name: user.displayName||''});
+        const famDoc = await db.collection('families').doc(familyId).get();
+        if(!famDoc.exists){
+          await db.collection('families').doc(familyId).set(state);
+        }
+      }
+      startSync();
+      showScreen('screen-role');
+    } catch(e) {
+      console.log('auth error', e);
+      showScreen('screen-role');
+    }
+  } else {
+    currentUser = null;
+    familyId = null;
+    if(unsubscribe) unsubscribe();
+    showScreen('screen-login');
+  }
+});
+
+function startSync(){
+  if(unsubscribe) unsubscribe();
+  unsubscribe = db.collection('families').doc(familyId)
+    .onSnapshot(doc => {
+      if(doc.exists){
+        const remote = doc.data();
+        Object.assign(state, remote);
+        checkDailyReset();
+        // Refresh current screen
+        const activeScreen = document.querySelector('.screen.active');
+        if(activeScreen){
+          const id = activeScreen.id;
+          if(id==='screen-kid') refreshKid();
+          else if(id==='screen-mom') refreshMom();
+        }
+      }
+    });
+}
+
+function saveState(){
+  // Save locally
+  try{localStorage.setItem('mao_v5', JSON.stringify(state));}catch(e){}
+  // Save to Firebase
+  if(familyId){
+    db.collection('families').doc(familyId).set(state).catch(e=>console.log('Sync error',e));
+  }
+}
+
+// Family join — mom can share family ID with kid
+function getFamilyId(){ return familyId; }
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
