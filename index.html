@@ -1373,16 +1373,19 @@ function renderMomReview(){
     incEl.innerHTML=`<div style="font-size:13px;color:var(--muted);padding:4px 0;">全部完成了！貓貓相信你可以完成任務 🐾</div>`;
   } else {
     const extraBadgeMom=`<span style="font-size:10px;font-size:10px;color:var(--muted);background:var(--bg);border-radius:4px;padding:1px 5px;margin-left:4px;">額外</span>`;
-    incEl.innerHTML=incomplete.map(t=>{
+    incEl.innerHTML=incomplete.map((t,idx)=>{
       const isExtra=!!t.kid_id;
+      const infoId=`inc-${idx}`;
       return `<div class="task-card">
         <div class="task-icon-wrap">${svg(t.icon||'star','var(--muted)')}</div>
         <div class="task-info">
           <div class="task-name" style="color:var(--muted);">${t.name}${isExtra?extraBadgeMom:''}</div>
           <div class="task-reward" style="color:var(--muted);">NT$ ${t.amount}</div>
         </div>
+        ${t.desc&&t.desc.length>0?`<button class="info-btn" onclick="toggleInfo('${infoId}')">i</button>`:''}
         <span style="font-size:11px;color:var(--muted);font-weight:700;">未完成</span>
-      </div>`;
+      </div>
+      ${t.desc&&t.desc.length>0?`<div class="tooltip-box" id="${infoId}">${t.desc}</div>`:''}`;
     }).join('');
   }
 
