@@ -1056,7 +1056,15 @@ function completeKidExtra(kidId){
   if(!state.kidExtraTasks)return;
   const task=state.kidExtraTasks.find(t=>t.kid_id===kidId);if(!task)return;
   if(state.pendingTasks.find(p=>p.originalId===kidId)){showToast('已送出審核中！');return;}
-  state.pendingTasks.push({...task,pendingId:state.nextId++,originalId:kidId,icon:'star',isKidSelf:true});
+  state.pendingTasks.push({
+    pendingId:state.nextId++,
+    originalId:kidId,
+    name:task.name,
+    desc:task.desc||'',
+    amount:task.amount,
+    icon:task.icon||'star',
+    isKidSelf:true
+  });
   task.done=true;
   showToast('任務完成，貓BOSS審核中… 🐾');
   saveState();renderKidDaily();
@@ -1336,10 +1344,10 @@ function renderMomReview(){
       <div class="review-row">
         <div class="task-icon-wrap pending">${svg(t.icon||'star','var(--amber)')}</div>
         <div class="task-info"><div class="task-name">${t.name}${extraBadge}</div><div class="task-reward pending">NT$ ${t.amount}</div>${subj}</div>
-        ${t.desc?`<button class="info-btn" onclick="toggleInfo('rev-${t.pendingId||t.id}')">i</button>`:''}
+        ${t.desc&&t.desc.length>0?`<button class="info-btn" onclick="toggleInfo('rev-${t.pendingId||t.id}')">i</button>`:''}
         <span style="font-size:10px;color:var(--amber);font-weight:700;">${(isKidAdded||isKidSelf)?'小孩新增':'審核中'}</span>
       </div>
-      ${t.desc?`<div class="tooltip-box" id="rev-${t.pendingId||t.id}">${t.desc}</div>`:''}
+      ${t.desc&&t.desc.length>0?`<div class="tooltip-box" id="rev-${t.pendingId||t.id}">${t.desc}</div>`:''}
       ${amountEdit}
       <div class="review-actions">
         <button class="btn-approve" onclick="approvePending(${pid},${t.isDaily})">✓ 確認完成</button>

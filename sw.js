@@ -1,41 +1,25 @@
-const CACHE = 'mao-v4';
-const BASE = '/maomao-task';
-const ASSETS = [
-  BASE + '/',
-  BASE + '/index.html',
-  BASE + '/manifest.json'
-];
+// v5 - force clear all caches
+const CACHE = 'mao-v5';
 
 self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(ASSETS).catch(()=>{}))
-  );
   self.skipWaiting();
 });
 
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+      Promise.all(keys.map(k => caches.delete(k)))
     )
   );
   self.clients.claim();
 });
 
+// Don't cache anything - always fetch fresh
 self.addEventListener('fetch', e => {
   const url = e.request.url;
   if(url.includes('firebase') || url.includes('google') || url.includes('gstatic') || url.includes('googleapis')) {
     return;
   }
-  e.respondWith(
-    caches.match(e.request).then(cached => {
-      if (cached) return cached;
-      return fetch(e.request).then(res => {
-        if (!res || res.status !== 200) return res;
-        const clone = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, clone));
-        return res;
-      }).catch(() => caches.match(BASE + '/index.html'));
-    })
-  );
+  // Just pass through, no caching
+  e.respondWith(fetch(e.request).catch(() => new Response('offline')));
 });
