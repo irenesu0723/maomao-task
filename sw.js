@@ -1,8 +1,8 @@
-const CACHE = 'mao-v2';
+const CACHE = 'mao-v3';
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json'
+  '/maomao-task/',
+  '/maomao-task/index.html',
+  '/maomao-task/manifest.json'
 ];
 
 self.addEventListener('install', e => {
