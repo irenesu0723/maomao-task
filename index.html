@@ -1046,7 +1046,7 @@ function kidAddSelfTask(){
   const amount=parseInt(document.getElementById('kid-self-amount').value)||0;
   if(!name){showToast('請輸入任務名稱');return;}
   if(!state.kidExtraTasks) state.kidExtraTasks=[];
-  state.kidExtraTasks.push({name,desc,amount,kid_id:state.nextId++,done:false,addedDate:getTodayStr(),icon:'star'});
+  state.kidExtraTasks.push({name,desc,amount,kid_id:state.nextId++,done:false,addedDate:getTodayStr(),icon:'star',isKidSelf:true});
   closeModal('modal-kid-add-task');
   showToast('任務已加入！點「完成」再送審 🐾');
   saveState();renderKidDaily();
@@ -1461,6 +1461,11 @@ function approvePending(idOrDailyId,isDaily){
     const task=state.pendingTasks.find(t=>t.pendingId===idOrDailyId);if(!task)return;
     state.balance+=task.amount;
     state.history.push({icon:task.icon||'star',name:'完成：'+task.name,amount:task.amount,date:getDateTimeStr(),rawDate:Date.now()});
+    // If kid self task, mark as done in kidExtraTasks
+    if(task.isKidSelf&&state.kidExtraTasks){
+      const kidTask=state.kidExtraTasks.find(t=>t.kid_id===task.originalId);
+      if(kidTask) kidTask.done=true;
+    }
     state.pendingTasks=state.pendingTasks.filter(t=>t.pendingId!==idOrDailyId);
   }
   showToast(randMsg(APPROVE_MSGS,state.balance));saveState();refreshMom();
@@ -1474,8 +1479,17 @@ function updateKidTaskAmount(pendingId,val){
 }
 
 function rejectPending(idOrDailyId,isDaily){
-  if(isDaily)delete state.dailyState[idOrDailyId];
-  else state.pendingTasks=state.pendingTasks.filter(t=>t.pendingId!==idOrDailyId);
+  if(isDaily){
+    delete state.dailyState[idOrDailyId];
+  } else {
+    const task=state.pendingTasks.find(t=>t.pendingId===idOrDailyId);
+    // If it's a kid self-added task, reset done flag in kidExtraTasks
+    if(task&&task.isKidSelf&&state.kidExtraTasks){
+      const kidTask=state.kidExtraTasks.find(t=>t.kid_id===task.originalId);
+      if(kidTask) kidTask.done=false;
+    }
+    state.pendingTasks=state.pendingTasks.filter(t=>t.pendingId!==idOrDailyId);
+  }
   showToast('任務退回，再摸一下就有獎勵了！');saveState();refreshMom();
 }
 function approveWithdraw(wid){
