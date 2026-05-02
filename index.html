@@ -1096,25 +1096,32 @@ function renderKidExtra(){
 function renderKidHistory(){
   const list=document.getElementById('kid-history-list');
   if(!state.history.length){list.innerHTML=`<div class="empty-state"><div class="empty-icon">${svg('coin','#ccc')}</div><div class="empty-text">摸魚紀錄空空的<br>快去完成任務！</div></div>`;return;}
-  // Group by week
+  const days=['日','一','二','三','四','五','六'];
+  const todayKey=getTodayStr();
   const groups={};
   [...state.history].reverse().forEach(h=>{
     const d=new Date(h.rawDate||Date.now());
-    const yr=d.getFullYear(),mo=d.getMonth()+1,wk=getWeekNum(d);
-    const key=`${yr}-W${wk}`;
-    const label=`${yr}年 第${wk}週 (${mo}月)`;
-    if(!groups[key])groups[key]={label,items:[]};
+    const key=d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
+    const label=d.getFullYear()+'/'+(d.getMonth()+1).toString().padStart(2,'0')+'/'+d.getDate().toString().padStart(2,'0')+'('+days[d.getDay()]+')';
+    if(!groups[key])groups[key]={label,key,items:[]};
     groups[key].items.push(h);
   });
-  list.innerHTML=Object.entries(groups).map(([key,g],gi)=>`
-    <div class="history-group">
+  list.innerHTML=Object.entries(groups).map(([key,g],gi)=>{
+    const isToday=key===todayKey;
+    const income=g.items.filter(h=>h.amount>0).reduce((s,h)=>s+h.amount,0);
+    const deduct=g.items.filter(h=>h.amount<0).reduce((s,h)=>s+h.amount,0);
+    const summaryParts=[];
+    if(income>0) summaryParts.push(`<span style="color:var(--green);font-weight:700;">+NT$${income}</span>`);
+    if(deduct<0) summaryParts.push(`<span style="color:var(--red);font-weight:700;">-NT$${Math.abs(deduct)}</span>`);
+    const summary=summaryParts.join('<span style="color:var(--muted);margin:0 3px;">/</span>');
+    return `<div class="history-group">
       <div class="history-group-hdr" onclick="toggleGroup('hg-${gi}','arr-${gi}')">
         <div class="history-group-label">📅 ${g.label}</div>
         <div style="flex:1;"></div>
-        <div style="font-size:11px;color:var(--muted);margin-right:4px;">共${g.items.length}筆</div>
-        <div class="history-group-arrow open" id="arr-${gi}">▶</div>
+        <div style="font-size:12px;margin-right:6px;">${summary}</div>
+        <div class="history-group-arrow ${isToday?'open':''}" id="arr-${gi}">▶</div>
       </div>
-      <div class="history-group-body" id="hg-${gi}">
+      <div class="history-group-body" id="hg-${gi}" style="display:${isToday?'block':'none'};">
         ${g.items.map(h=>`
           <div class="history-item">
             <div class="history-icon-wrap">${svg(h.icon||'star',h.amount>0?'var(--green)':'var(--red)')}</div>
@@ -1122,7 +1129,8 @@ function renderKidHistory(){
             <div class="history-amount ${h.amount>0?'amount-plus':'amount-minus'}">${h.amount>0?'+':'-'} NT$${Math.abs(h.amount)}</div>
           </div>`).join('')}
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 function getWeekNum(d){const start=new Date(d.getFullYear(),0,1);return Math.ceil(((d-start)/86400000+start.getDay()+1)/7);}
@@ -1404,22 +1412,32 @@ function renderMomReview(){
 function renderMomHistory(){
   const list=document.getElementById('mom-history-list');
   if(!state.history.length){list.innerHTML=`<div class="empty-state"><div class="empty-icon">${svg('coin','#ccc')}</div><div class="empty-text">還沒有紀錄</div></div>`;return;}
+  const days=['日','一','二','三','四','五','六'];
+  const todayKey=getTodayStr();
   const groups={};
   [...state.history].reverse().forEach(h=>{
     const d=new Date(h.rawDate||Date.now());
-    const yr=d.getFullYear(),mo=d.getMonth()+1,wk=getWeekNum(d);
-    const key=`${yr}-W${wk}`;const label=`${yr}年 第${wk}週 (${mo}月)`;
-    if(!groups[key])groups[key]={label,items:[]};groups[key].items.push(h);
+    const key=d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
+    const label=d.getFullYear()+'/'+(d.getMonth()+1).toString().padStart(2,'0')+'/'+d.getDate().toString().padStart(2,'0')+'('+days[d.getDay()]+')';
+    if(!groups[key])groups[key]={label,key,items:[]};
+    groups[key].items.push(h);
   });
-  list.innerHTML=Object.entries(groups).map(([key,g],gi)=>`
-    <div class="history-group">
+  list.innerHTML=Object.entries(groups).map(([key,g],gi)=>{
+    const isToday=key===todayKey;
+    const income=g.items.filter(h=>h.amount>0).reduce((s,h)=>s+h.amount,0);
+    const deduct=g.items.filter(h=>h.amount<0).reduce((s,h)=>s+h.amount,0);
+    const summaryParts=[];
+    if(income>0) summaryParts.push(`<span style="color:var(--green);font-weight:700;">+NT$${income}</span>`);
+    if(deduct<0) summaryParts.push(`<span style="color:var(--red);font-weight:700;">-NT$${Math.abs(deduct)}</span>`);
+    const summary=summaryParts.join('<span style="color:var(--muted);margin:0 3px;">/</span>');
+    return `<div class="history-group">
       <div class="history-group-hdr" onclick="toggleGroup('mhg-${gi}','marr-${gi}')">
         <div class="history-group-label">📅 ${g.label}</div>
         <div style="flex:1;"></div>
-        <div style="font-size:11px;color:var(--muted);margin-right:4px;">共${g.items.length}筆</div>
-        <div class="history-group-arrow open" id="marr-${gi}">▶</div>
+        <div style="font-size:12px;margin-right:6px;">${summary}</div>
+        <div class="history-group-arrow ${isToday?'open':''}" id="marr-${gi}">▶</div>
       </div>
-      <div class="history-group-body" id="mhg-${gi}">
+      <div class="history-group-body" id="mhg-${gi}" style="display:${isToday?'block':'none'};">
         ${g.items.map(h=>`
           <div class="history-item">
             <div class="history-icon-wrap">${svg(h.icon||'star',h.amount>0?'var(--green)':'var(--red)')}</div>
@@ -1427,7 +1445,8 @@ function renderMomHistory(){
             <div class="history-amount ${h.amount>0?'amount-plus':'amount-minus'}">${h.amount>0?'+':'-'} NT$${Math.abs(h.amount)}</div>
           </div>`).join('')}
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 function approvePending(idOrDailyId,isDaily){
   if(isDaily){
